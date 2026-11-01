@@ -90,6 +90,10 @@ void filter_section(Section &s, const std::vector<int> &keep)
 			continue;
 		if (starts_with(l, "a=extmap:") && l.find("transport-wide-cc") != std::string::npos)
 			continue;
+		// Without the coordination of video orientation (CVO) extension, browsers rotate the frames
+		// themselves: a phone held in portrait sends portrait pictures instead of a rotation flag.
+		if (starts_with(l, "a=extmap:") && l.find("video-orientation") != std::string::npos)
+			continue;
 		out.push_back(l);
 	}
 	s.lines = std::move(out);
