@@ -22,7 +22,7 @@ namespace camdrop {
 
 namespace {
 
-constexpr uint32_t kPollMs = 20;            // read timeout of the connection loops
+constexpr uint32_t kPollMs = 20; // read timeout of the connection loops
 constexpr int64_t kHandshakeTimeoutMs = 10000;
 constexpr int64_t kRequestTimeoutMs = 15000; // idle keep-alive connection
 constexpr int64_t kWsPingIntervalMs = 15000;
@@ -186,7 +186,8 @@ struct Server::Connection : public WsConnection, public std::enable_shared_from_
 				left -= static_cast<size_t>(ret);
 				continue;
 			}
-			if ((ret == MBEDTLS_ERR_SSL_WANT_WRITE || ret == MBEDTLS_ERR_SSL_WANT_READ) && now_ms() < deadline)
+			if ((ret == MBEDTLS_ERR_SSL_WANT_WRITE || ret == MBEDTLS_ERR_SSL_WANT_READ) &&
+			    now_ms() < deadline)
 				continue;
 			return false;
 		}
@@ -369,7 +370,8 @@ void Server::serve(const std::shared_ptr<Connection> &conn)
 				continue;
 			}
 			// Typical: the browser refuses the self-signed certificate on its first visit.
-			obs_log(LOG_DEBUG, "TLS handshake with %s failed: %s", conn->ip.c_str(), mbed_error(ret).c_str());
+			obs_log(LOG_DEBUG, "TLS handshake with %s failed: %s", conn->ip.c_str(),
+				mbed_error(ret).c_str());
 			return;
 		}
 		peer.secure = true;
@@ -433,7 +435,8 @@ void Server::serve(const std::shared_ptr<Connection> &conn)
 
 bool Server::serve_websocket(const std::shared_ptr<Connection> &conn, const HttpRequest &req, const PeerInfo &peer)
 {
-	if (req.method != "GET" || req.header("sec-websocket-version") != "13" || req.header("sec-websocket-key").empty()) {
+	if (req.method != "GET" || req.header("sec-websocket-version") != "13" ||
+	    req.header("sec-websocket-key").empty()) {
 		conn->write_all(serialize_response(HttpResponse::text(400, "Bad WebSocket request"), false));
 		return false;
 	}

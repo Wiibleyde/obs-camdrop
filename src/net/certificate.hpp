@@ -9,8 +9,8 @@ namespace camdrop {
 struct CertificateInfo {
 	std::string subject;
 	std::string issuer;
-	std::string valid_to;   // "YYYY-MM-DD"
-	std::string sha256;     // colon separated fingerprint
+	std::string valid_to; // "YYYY-MM-DD"
+	std::string sha256;   // colon separated fingerprint
 	bool self_signed = false;
 };
 

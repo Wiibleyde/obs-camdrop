@@ -108,8 +108,8 @@ std::vector<uint8_t> build_nack(uint32_t sender_ssrc, uint32_t media_ssrc, const
 
 	std::vector<uint8_t> out;
 	const uint16_t length_words = static_cast<uint16_t>(2 + fci.size()); // (size / 4) - 1
-	out.push_back(0x80 | 1); // V=2, FMT=1
-	out.push_back(205);      // RTPFB
+	out.push_back(0x80 | 1);                                             // V=2, FMT=1
+	out.push_back(205);                                                  // RTPFB
 	wr16(out, length_words);
 	wr32(out, sender_ssrc);
 	wr32(out, media_ssrc);

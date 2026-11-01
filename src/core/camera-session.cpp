@@ -94,8 +94,8 @@ void CameraSession::handle_message(const json &message)
 
 void CameraSession::handle_telemetry(const json &message)
 {
-	static const char *numeric[] = {"fps",      "width",  "height", "kbps",   "rtt",       "jitter",
-					"lossPct",  "battery", "targetKbps", "framesEncoded", "cpuLimited"};
+	static const char *numeric[] = {"fps",     "width",   "height",     "kbps",          "rtt",       "jitter",
+					"lossPct", "battery", "targetKbps", "framesEncoded", "cpuLimited"};
 	static const char *strings[] = {"qualityLimitation", "pressure", "codec", "facing", "camera", "encoder"};
 	static const char *booleans[] = {"charging", "visible", "wakeLock", "economy", "muted"};
 
@@ -178,8 +178,9 @@ void CameraSession::handle_offer(const std::string &sdp)
 
 	pc->onLocalCandidate([weak](rtc::Candidate candidate) {
 		if (auto self = weak.lock())
-			self->send({{"type", "candidate"},
-				    {"candidate", {{"candidate", candidate.candidate()}, {"sdpMid", candidate.mid()}}}});
+			self->send(
+				{{"type", "candidate"},
+				 {"candidate", {{"candidate", candidate.candidate()}, {"sdpMid", candidate.mid()}}}});
 	});
 
 	pc->onStateChange([weak, max_kbps](rtc::PeerConnection::State state) {

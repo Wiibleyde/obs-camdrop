@@ -217,7 +217,8 @@ std::string tune_answer(const std::string &sdp, int max_bitrate_kbps, bool opus_
 					      ";x-google-max-bitrate=" + std::to_string(max_bitrate_kbps) +
 					      ";x-google-min-bitrate=300");
 			}
-			if (std::none_of(out.begin(), out.end(), [](const std::string &l) { return starts_with(l, "b=AS"); }))
+			if (std::none_of(out.begin(), out.end(),
+					 [](const std::string &l) { return starts_with(l, "b=AS"); }))
 				out.insert(out.begin() + 1, "b=AS:" + std::to_string(max_bitrate_kbps));
 			s.lines = std::move(out);
 		} else if (kind == "audio" && opus_10ms) {

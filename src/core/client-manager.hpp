@@ -47,7 +47,8 @@ public:
 	// Handshake of a camera page. Fills `error` ("bad_code", "rate_limited", "full", "name_taken",
 	// "bad_name") on failure.
 	std::shared_ptr<CameraSession> join(const json &hello, const PeerInfo &peer, const std::string &user_agent,
-					    const std::shared_ptr<WsConnection> &ws, std::string &error, int &retry_after);
+					    const std::shared_ptr<WsConnection> &ws, std::string &error,
+					    int &retry_after);
 	void leave(const std::shared_ptr<CameraSession> &session, const std::string &reason);
 
 	void add_dock(const std::shared_ptr<WsConnection> &ws);

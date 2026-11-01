@@ -1,0 +1,53 @@
+name: Bug report
+description: Something does not work as expected
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, what happened instead?
+    validations:
+      required: true
+  - type: input
+    id: obs
+    attributes:
+      label: OBS version
+      placeholder: "32.2.1"
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: "Windows 11 24H2"
+    validations:
+      required: true
+  - type: input
+    id: camdrop
+    attributes:
+      label: Camdrop version
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: input
+    id: phone
+    attributes:
+      label: Phone model and browser
+      placeholder: "Pixel 8 / Chrome 140, iPhone 15 / Safari 26"
+    validations:
+      required: true
+  - type: textarea
+    id: network
+    attributes:
+      label: Network
+      description: Wi-Fi band, PC on Ethernet or Wi-Fi, number of cameras, values shown in the Camdrop dock
+  - type: input
+    id: log
+    attributes:
+      label: OBS log URL
+      description: Help → Log Files → Upload Current Log File
+  - type: textarea
+    id: more
+    attributes:
+      label: Anything else?

@@ -32,8 +32,8 @@ struct PipelineStats {
 	uint64_t frames_skipped = 0; // late frames dropped to keep the latency
 	uint64_t decode_errors = 0;
 	uint64_t audio_dropped = 0;
-	double delay_ms = 0;  // average time between frame completion and display
-	int buffer_ms = 0;    // current target
+	double delay_ms = 0; // average time between frame completion and display
+	int buffer_ms = 0;   // current target
 	bool av_synced = false;
 };
 

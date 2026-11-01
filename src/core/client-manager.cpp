@@ -16,8 +16,8 @@ namespace camdrop {
 namespace {
 
 constexpr int64_t kSec = 1000000000LL;
-constexpr int64_t kClearDelayNs = 3 * kSec;      // blank sources 3 s after a disconnection
-constexpr int64_t kDepartedKeepNs = 120 * kSec;  // dock keeps disconnected cameras for 2 min
+constexpr int64_t kClearDelayNs = 3 * kSec;     // blank sources 3 s after a disconnection
+constexpr int64_t kDepartedKeepNs = 120 * kSec; // dock keeps disconnected cameras for 2 min
 
 int64_t now_ns()
 {
@@ -62,7 +62,8 @@ public:
 			int retry_after = 0;
 			session_ = ClientManager::get().join(j, peer_, ua_, ws, error, retry_after);
 			if (!session_) {
-				ws->send_text(json{{"type", "error"}, {"code", error}, {"retryAfter", retry_after}}.dump());
+				ws->send_text(
+					json{{"type", "error"}, {"code", error}, {"retryAfter", retry_after}}.dump());
 				ws->close(4000, error);
 				return;
 			}
@@ -332,7 +333,8 @@ std::vector<ClientManager::ClientInfo> ClientManager::clients() const
 	std::vector<ClientInfo> out;
 	std::lock_guard<std::mutex> lock(mutex_);
 	for (const auto &[id, s] : sessions_) {
-		auto it = std::find_if(out.begin(), out.end(), [&](const ClientInfo &c) { return c.name == s->name(); });
+		auto it =
+			std::find_if(out.begin(), out.end(), [&](const ClientInfo &c) { return c.name == s->name(); });
 		if (it == out.end())
 			out.push_back({s->name(), true});
 	}
@@ -456,9 +458,10 @@ void ClientManager::maintenance_loop()
 					it = channels_.erase(it);
 				}
 			}
-			departed_.erase(std::remove_if(departed_.begin(), departed_.end(),
-						       [&](const Departed &d) { return now - d.when_ns > kDepartedKeepNs; }),
-					departed_.end());
+			departed_.erase(
+				std::remove_if(departed_.begin(), departed_.end(),
+					       [&](const Departed &d) { return now - d.when_ns > kDepartedKeepNs; }),
+				departed_.end());
 			for (auto it = docks_.begin(); it != docks_.end();) {
 				if (auto d = it->lock()) {
 					docks.push_back(d);

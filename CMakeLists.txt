@@ -34,7 +34,10 @@ if(ENABLE_QT)
     ${CMAKE_PROJECT_NAME}
     PRIVATE $<$<C_COMPILER_ID:Clang,AppleClang>:-Wno-quoted-include-in-framework-header -Wno-comma>
   )
-  set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES AUTOMOC ON AUTOUIC ON AUTORCC ON)
+  set_target_properties(
+    ${CMAKE_PROJECT_NAME}
+    PROPERTIES AUTOMOC ON AUTOUIC ON AUTORCC ON
+  )
   target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE CAMDROP_HAVE_QT)
   target_sources(
     ${CMAKE_PROJECT_NAME}
@@ -51,8 +54,14 @@ find_package(nlohmann_json QUIET)
 
 target_link_libraries(
   ${CMAKE_PROJECT_NAME}
-  PRIVATE LibDataChannel::LibDataChannel MbedTLS::mbedtls MbedTLS::mbedx509 MbedTLS::mbedcrypto
-          qrcodegencpp::qrcodegencpp FFmpeg::avcodec FFmpeg::avutil
+  PRIVATE
+    LibDataChannel::LibDataChannel
+    MbedTLS::mbedtls
+    MbedTLS::mbedx509
+    MbedTLS::mbedcrypto
+    qrcodegencpp::qrcodegencpp
+    FFmpeg::avcodec
+    FFmpeg::avutil
 )
 
 if(TARGET nlohmann_json::nlohmann_json)

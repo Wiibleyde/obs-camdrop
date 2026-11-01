@@ -323,7 +323,8 @@ void SettingsDialog::apply()
 	std::string error;
 	if (!App::get().apply(s, error)) {
 		QMessageBox::warning(this, T("Settings.Title"),
-				     T("Settings.StartFailed") + QStringLiteral("\n\n") + QString::fromStdString(error));
+				     T("Settings.StartFailed") + QStringLiteral("\n\n") +
+					     QString::fromStdString(error));
 	}
 	refresh_status();
 }
@@ -375,8 +376,7 @@ void SettingsDialog::update_qr()
 
 void SettingsDialog::regenerate_code()
 {
-	if (QMessageBox::question(this, T("Settings.Title"), T("Settings.RegenerateCodeConfirm")) !=
-	    QMessageBox::Yes)
+	if (QMessageBox::question(this, T("Settings.Title"), T("Settings.RegenerateCodeConfirm")) != QMessageBox::Yes)
 		return;
 	code_->setText(QString::fromStdString(generate_access_code()));
 	apply();
@@ -384,8 +384,7 @@ void SettingsDialog::regenerate_code()
 
 void SettingsDialog::regenerate_certificate()
 {
-	if (QMessageBox::question(this, T("Settings.Title"), T("Settings.RegenerateCertConfirm")) !=
-	    QMessageBox::Yes)
+	if (QMessageBox::question(this, T("Settings.Title"), T("Settings.RegenerateCertConfirm")) != QMessageBox::Yes)
 		return;
 	std::string error;
 	if (!App::get().regenerate_certificate(error))

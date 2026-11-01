@@ -19,12 +19,12 @@ struct Settings {
 	std::string access_code; // random code required by the web page and the dock
 
 	int max_clients = 8;
-	int video_height = 720;       // requested capture height (480 / 720 / 1080)
-	int video_fps = 30;           // 30 by default, 60 if the camera allows it
-	int max_bitrate_kbps = 5000;  // per client
+	int video_height = 720;               // requested capture height (480 / 720 / 1080)
+	int video_fps = 30;                   // 30 by default, 60 if the camera allows it
+	int max_bitrate_kbps = 5000;          // per client
 	std::string preferred_codec = "h264"; // "h264" or "vp8"
-	bool hw_decode = true;        // D3D11VA on Windows, software fallback
-	bool opus_10ms = false;       // ask browsers for 10 ms Opus frames
+	bool hw_decode = true;                // D3D11VA on Windows, software fallback
+	bool opus_10ms = false;               // ask browsers for 10 ms Opus frames
 
 	bool operator==(const Settings &o) const = default;
 };

@@ -36,7 +36,7 @@ public:
 	struct Stats {
 		uint64_t frames = 0;
 		uint64_t keyframes = 0;
-		uint64_t lost_packets = 0;     // never recovered
+		uint64_t lost_packets = 0;      // never recovered
 		uint64_t recovered_packets = 0; // arrived after a NACK
 		uint64_t dropped_frames = 0;
 		uint64_t resyncs = 0;

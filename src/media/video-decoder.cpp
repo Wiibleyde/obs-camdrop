@@ -81,9 +81,9 @@ bool VideoDecoder::open(VideoCodec codec, bool try_hardware)
 bool VideoDecoder::open_internal(bool hardware)
 {
 	close();
-	const AVCodecID id = codec_ == VideoCodec::H264 ? AV_CODEC_ID_H264
+	const AVCodecID id = codec_ == VideoCodec::H264  ? AV_CODEC_ID_H264
 			     : codec_ == VideoCodec::VP8 ? AV_CODEC_ID_VP8
-							  : AV_CODEC_ID_NONE;
+							 : AV_CODEC_ID_NONE;
 	const AVCodec *decoder = avcodec_find_decoder(id);
 	if (!decoder) {
 		obs_log(LOG_ERROR, "No FFmpeg decoder for %s", video_codec_name(codec_));
@@ -111,7 +111,8 @@ bool VideoDecoder::open_internal(bool hardware)
 			const AVCodecHWConfig *config = avcodec_get_hw_config(decoder, i);
 			if (!config)
 				break;
-			if (config->device_type == type && (config->methods & AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX)) {
+			if (config->device_type == type &&
+			    (config->methods & AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX)) {
 				pix_fmt = config->pix_fmt;
 				break;
 			}

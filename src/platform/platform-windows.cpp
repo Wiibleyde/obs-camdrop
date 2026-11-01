@@ -27,7 +27,7 @@ static std::string narrow(const wchar_t *w)
 
 static bool looks_virtual(const std::string &name, const std::string &desc)
 {
-	static const char *markers[] = {"vEthernet", "VirtualBox", "VMware", "Hyper-V", "WSL",       "Loopback",
+	static const char *markers[] = {"vEthernet", "VirtualBox", "VMware",   "Hyper-V",   "WSL",       "Loopback",
 					"TAP-",      "Tailscale",  "ZeroTier", "WireGuard", "Bluetooth", "vpn"};
 	for (const char *m : markers) {
 		if (name.find(m) != std::string::npos || desc.find(m) != std::string::npos)

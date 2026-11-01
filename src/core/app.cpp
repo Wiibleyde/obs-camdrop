@@ -20,7 +20,7 @@ namespace {
 
 int64_t file_mtime(const std::string &path)
 {
-	struct stat st {};
+	struct stat st{};
 	if (path.empty() || os_stat(path.c_str(), &st) != 0)
 		return 0;
 	return static_cast<int64_t>(st.st_mtime) ^ (static_cast<int64_t>(st.st_size) << 40);
@@ -142,11 +142,11 @@ bool App::start_server_locked(std::string &error)
 	}
 	cert_pem_ = creds.cert_pem;
 
-	server_ = std::make_unique<Server>(
-		[this](const HttpRequest &req, const PeerInfo &peer) { return handle_http(req, peer); },
-		[this](const HttpRequest &req, const PeerInfo &peer, HttpResponse &reject) {
-			return handle_ws(req, peer, reject);
-		});
+	server_ = std::make_unique<Server>([this](const HttpRequest &req,
+						  const PeerInfo &peer) { return handle_http(req, peer); },
+					   [this](const HttpRequest &req, const PeerInfo &peer, HttpResponse &reject) {
+						   return handle_ws(req, peer, reject);
+					   });
 	if (!server_->start(settings_.port, creds, error)) {
 		server_.reset();
 		last_error_ = error;

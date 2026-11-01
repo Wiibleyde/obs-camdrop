@@ -177,7 +177,7 @@ obs_properties_t *source_properties(void *data)
 
 	if (g_open_settings)
 		obs_properties_add_button2(props, "open_settings", obs_module_text("Source.OpenSettings"),
-					  settings_clicked, nullptr);
+					   settings_clicked, nullptr);
 	return props;
 }
 

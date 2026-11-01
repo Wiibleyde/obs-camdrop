@@ -295,8 +295,9 @@ void MediaPipeline::output_due_audio(int64_t now, int buffer_ms)
 		while (!audio_in_.empty()) {
 			RtpPacket &p = audio_in_.begin()->second;
 			int64_t base = 0;
-			int64_t play = clock_.base_playout_ns(StreamKind::Audio, p.timestamp, base) ? base + buffer_ns
-												     : p.arrival_ns + buffer_ns;
+			int64_t play = clock_.base_playout_ns(StreamKind::Audio, p.timestamp, base)
+					       ? base + buffer_ns
+					       : p.arrival_ns + buffer_ns;
 			if (play > now + buffer_ns + 1000 * kMs)
 				play = now; // clock anomaly guard
 			if (play > now + 2 * kMs)
@@ -339,7 +340,8 @@ void MediaPipeline::output_due_audio(int64_t now, int buffer_ms)
 			audio.timestamp = static_cast<uint64_t>(ts);
 			channel_->output_audio(&audio);
 
-			const int64_t duration = static_cast<int64_t>(f->nb_samples) * 1000000000LL / audio.samples_per_sec;
+			const int64_t duration =
+				static_cast<int64_t>(f->nb_samples) * 1000000000LL / audio.samples_per_sec;
 			last_audio_ts_ = ts + duration;
 			ts += duration;
 		}

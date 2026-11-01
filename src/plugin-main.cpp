@@ -51,8 +51,7 @@ static void on_frontend_event(enum obs_frontend_event event, void *)
 	if (event == OBS_FRONTEND_EVENT_FINISHED_LOADING) {
 		camdrop::ui::create_dock();
 		camdrop::ui::maybe_snapshot();
-	}
-	else if (event == OBS_FRONTEND_EVENT_EXIT || event == OBS_FRONTEND_EVENT_SCRIPTING_SHUTDOWN)
+	} else if (event == OBS_FRONTEND_EVENT_EXIT || event == OBS_FRONTEND_EVENT_SCRIPTING_SHUTDOWN)
 		camdrop::ui::shutdown();
 #else
 	(void)event;

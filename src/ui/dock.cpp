@@ -69,9 +69,8 @@ SupervisionDock::SupervisionDock(QWidget *parent) : QWidget(parent)
 	stack_->addWidget(placeholder_);
 
 	connect(settings, &QPushButton::clicked, [] { open_settings(); });
-	connect(open_browser_, &QPushButton::clicked, [] {
-		QDesktopServices::openUrl(QUrl(QString::fromStdString(App::get().status().dock_url)));
-	});
+	connect(open_browser_, &QPushButton::clicked,
+		[] { QDesktopServices::openUrl(QUrl(QString::fromStdString(App::get().status().dock_url))); });
 
 	cef_ = obs_browser_init_panel();
 	if (cef_ && !cef_->init_browser())
@@ -108,8 +107,9 @@ void SupervisionDock::refresh()
 	open_browser_->setVisible(st.running);
 
 	if (!st.running) {
-		message_->setText(T(st.error.empty() ? "Dock.ServerOff" : "Dock.ServerError") +
-				  (st.error.empty() ? QString() : QStringLiteral("\n") + QString::fromStdString(st.error)));
+		message_->setText(
+			T(st.error.empty() ? "Dock.ServerOff" : "Dock.ServerError") +
+			(st.error.empty() ? QString() : QStringLiteral("\n") + QString::fromStdString(st.error)));
 		stack_->setCurrentWidget(placeholder_);
 		return;
 	}

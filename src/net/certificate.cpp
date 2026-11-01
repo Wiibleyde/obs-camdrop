@@ -141,7 +141,7 @@ bool generate_self_signed(const std::vector<std::string> &ips, std::string &cert
 		ret = mbedtls_x509write_crt_set_basic_constraints(&crt, 1, 0);
 	if (ret == 0)
 		ret = mbedtls_x509write_crt_set_key_usage(&crt, MBEDTLS_X509_KU_DIGITAL_SIGNATURE |
-								MBEDTLS_X509_KU_KEY_CERT_SIGN);
+									MBEDTLS_X509_KU_KEY_CERT_SIGN);
 	if (ret == 0)
 		ret = mbedtls_x509write_crt_set_subject_key_identifier(&crt);
 	if (ret == 0)

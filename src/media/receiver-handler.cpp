@@ -47,7 +47,8 @@ void ReceiverHandler::incoming(rtc::message_vector &messages, const rtc::message
 			continue;
 		}
 
-		const bool rtx = len >= 2 && std::find(rtx_pts_.begin(), rtx_pts_.end(), data[1] & 0x7F) != rtx_pts_.end();
+		const bool rtx = len >= 2 &&
+				 std::find(rtx_pts_.begin(), rtx_pts_.end(), data[1] & 0x7F) != rtx_pts_.end();
 		if (!rtx)
 			for_base.push_back(message);
 
