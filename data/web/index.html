@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+	<meta name="theme-color" content="#0f1115">
+	<meta name="color-scheme" content="dark">
+	<title>Camdrop</title>
+	<link rel="icon" href="icon.svg" type="image/svg+xml">
+	<link rel="stylesheet" href="style.css">
+</head>
+<body>
+	<main id="app">
+		<!-- Setup screen -->
+		<section id="setup" class="card">
+			<header class="brand">
+				<img src="icon.svg" alt="" width="36" height="36">
+				<div>
+					<h1>Camdrop</h1>
+					<p class="muted" data-i18n="tagline">Send this camera to OBS</p>
+				</div>
+			</header>
+
+			<form id="setup-form" autocomplete="off">
+				<label>
+					<span data-i18n="code">Access code</span>
+					<input id="code" inputmode="numeric" autocomplete="off" required maxlength="32">
+				</label>
+				<label>
+					<span data-i18n="name">Camera name</span>
+					<input id="name" required maxlength="32" data-i18n-placeholder="namePlaceholder" placeholder="e.g. Stage, Audience">
+				</label>
+
+				<div class="preview-wrap">
+					<video id="preview" playsinline muted autoplay></video>
+					<div id="preview-empty" class="preview-empty" data-i18n="previewEmpty">Camera preview</div>
+				</div>
+
+				<div class="row">
+					<label class="grow">
+						<span data-i18n="camera">Camera</span>
+						<select id="camera"></select>
+					</label>
+					<button type="button" id="flip" class="icon-button" data-i18n-title="flip" title="Switch camera" aria-label="Switch camera">⟲</button>
+				</div>
+				<div class="row">
+					<label class="grow">
+						<span data-i18n="quality">Quality</span>
+						<select id="quality">
+							<option value="480">480p</option>
+							<option value="720">720p</option>
+							<option value="1080">1080p</option>
+						</select>
+					</label>
+					<label class="grow">
+						<span data-i18n="fps">Frame rate</span>
+						<select id="fps">
+							<option value="30">30 fps</option>
+							<option value="60">60 fps</option>
+						</select>
+					</label>
+				</div>
+				<label class="check">
+					<input type="checkbox" id="mic" checked>
+					<span data-i18n="microphone">Send the microphone</span>
+				</label>
+				<label class="check">
+					<input type="checkbox" id="processing">
+					<span data-i18n="processing">Noise suppression and echo cancellation</span>
+				</label>
+
+				<p id="setup-error" class="error" role="alert" hidden></p>
+				<button type="submit" id="start" class="primary" data-i18n="start">Start</button>
+				<p class="hint" data-i18n="keepOpen">Keep this page open and in front, do not lock the phone, and plug in the charger.</p>
+			</form>
+		</section>
+
+		<!-- Live screen -->
+		<section id="live" hidden>
+			<video id="live-preview" playsinline muted autoplay></video>
+			<div class="overlay top">
+				<div class="pill" id="state-pill"><span class="dot"></span><span id="state-text"></span></div>
+				<div class="pill name-pill" id="live-name"></div>
+			</div>
+			<div class="overlay stats" id="stats"></div>
+			<div class="overlay bottom">
+				<button type="button" id="economy" class="secondary" data-i18n="economy">Economy mode</button>
+				<button type="button" id="mute" class="secondary" data-i18n="mute">Mute</button>
+				<button type="button" id="stop" class="danger" data-i18n="stop">Stop</button>
+			</div>
+			<div id="warning" class="overlay warning" hidden></div>
+			<div id="identify" class="identify" hidden></div>
+		</section>
+
+		<!-- Economy mode: black screen over the preview, tap to leave -->
+		<div id="economy-screen" class="economy" hidden>
+			<p data-i18n="economyHint">Economy mode: the camera keeps streaming. Tap to show the preview.</p>
+			<p id="economy-status" class="muted"></p>
+		</div>
+	</main>
+
+	<script src="i18n.js"></script>
+	<script src="app.js"></script>
+</body>
+</html>

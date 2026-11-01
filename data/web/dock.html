@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="color-scheme" content="dark">
+	<title>Camdrop</title>
+	<link rel="icon" href="icon.svg" type="image/svg+xml">
+	<link rel="stylesheet" href="dock.css">
+</head>
+<body>
+	<header class="bar">
+		<strong data-i18n="dockTitle">Camdrop</strong>
+		<span id="summary" class="muted"></span>
+		<label class="sound"><input type="checkbox" id="sound"> <span data-i18n="dockSound">Sound alerts</span></label>
+	</header>
+	<div id="connection" class="banner" hidden></div>
+	<main id="cameras"></main>
+	<p id="empty" class="empty" hidden></p>
+	<script src="i18n.js"></script>
+	<script src="dock.js"></script>
+</body>
+</html>
