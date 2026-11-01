@@ -29,6 +29,8 @@
 #include <QPushButton>
 #include <QRadioButton>
 #include <QSpinBox>
+#include <QTabWidget>
+#include <QTimer>
 #include <QUrl>
 #include <QVBoxLayout>
 
@@ -78,10 +80,27 @@ void open_settings()
 	g_dialog->activateWindow();
 }
 
+void maybe_snapshot()
+{
+	const char *dir = getenv("CAMDROP_UI_SNAPSHOT");
+	if (!dir || !*dir)
+		return;
+	const QString path = QString::fromLocal8Bit(dir);
+	QTimer::singleShot(3000, [path] {
+		open_settings();
+		QTimer::singleShot(1500, [path] {
+			if (g_dialog)
+				g_dialog->grab().save(path + QStringLiteral("/settings.png"));
+			if (auto *main = static_cast<QWidget *>(obs_frontend_get_main_window()))
+				main->grab().save(path + QStringLiteral("/main.png"));
+		});
+	});
+}
+
 SettingsDialog::SettingsDialog(QWidget *parent) : QDialog(parent)
 {
 	setWindowTitle(T("Settings.Title"));
-	setMinimumWidth(560);
+	setMinimumWidth(620);
 
 	auto *root = new QVBoxLayout(this);
 
@@ -92,7 +111,8 @@ SettingsDialog::SettingsDialog(QWidget *parent) : QDialog(parent)
 	root->addWidget(enabled_);
 
 	// Server
-	auto *server_box = new QGroupBox(T("Settings.Server"), this);
+	auto *tabs = new QTabWidget(this);
+	auto *server_box = new QWidget(tabs);
 	auto *server_form = new QFormLayout(server_box);
 	port_ = new QSpinBox(server_box);
 	port_->setRange(1, 65535);
@@ -119,10 +139,10 @@ SettingsDialog::SettingsDialog(QWidget *parent) : QDialog(parent)
 	code_row->addWidget(regen_code);
 	code_row->addStretch();
 	server_form->addRow(T("Settings.AccessCode"), code_row);
-	root->addWidget(server_box);
+	tabs->addTab(server_box, T("Settings.Server"));
 
 	// Certificate
-	auto *cert_box = new QGroupBox(T("Settings.Certificate"), this);
+	auto *cert_box = new QWidget(tabs);
 	auto *cert_layout = new QVBoxLayout(cert_box);
 	auto *self_row = new QHBoxLayout();
 	self_signed_ = new QRadioButton(T("Settings.SelfSigned"), cert_box);
@@ -151,10 +171,10 @@ SettingsDialog::SettingsDialog(QWidget *parent) : QDialog(parent)
 	cert_info_->setWordWrap(true);
 	cert_info_->setTextInteractionFlags(Qt::TextSelectableByMouse);
 	cert_layout->addWidget(cert_info_);
-	root->addWidget(cert_box);
+	tabs->addTab(cert_box, T("Settings.Certificate"));
 
 	// Video requested from the cameras
-	auto *video_box = new QGroupBox(T("Settings.Video"), this);
+	auto *video_box = new QWidget(tabs);
 	auto *video_form = new QFormLayout(video_box);
 	resolution_ = new QComboBox(video_box);
 	resolution_->addItem(QStringLiteral("480p"), 480);
@@ -178,7 +198,7 @@ SettingsDialog::SettingsDialog(QWidget *parent) : QDialog(parent)
 	video_form->addRow(QString(), hw_decode_);
 	opus_10ms_ = new QCheckBox(T("Settings.Opus10ms"), video_box);
 	video_form->addRow(QString(), opus_10ms_);
-	root->addWidget(video_box);
+	tabs->addTab(video_box, T("Settings.Video"));
 
 	// How to connect
 	connect_box_ = new QGroupBox(T("Settings.Connect"), this);
@@ -213,6 +233,7 @@ SettingsDialog::SettingsDialog(QWidget *parent) : QDialog(parent)
 	qr_->setAlignment(Qt::AlignCenter);
 	connect_layout->addWidget(qr_);
 	root->addWidget(connect_box_);
+	root->addWidget(tabs);
 
 	auto *buttons = new QDialogButtonBox(QDialogButtonBox::Apply | QDialogButtonBox::Close, this);
 	root->addWidget(buttons);

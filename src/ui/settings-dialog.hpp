@@ -16,6 +16,8 @@ namespace camdrop::ui {
 void register_menu();
 void open_settings();
 void shutdown();
+// Test hook: CAMDROP_UI_SNAPSHOT=<dir> saves pictures of the settings dialog after start-up.
+void maybe_snapshot();
 
 class SettingsDialog : public QDialog {
 	Q_OBJECT
