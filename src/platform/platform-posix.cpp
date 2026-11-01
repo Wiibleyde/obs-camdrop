@@ -102,7 +102,7 @@ int net_send(void *ctx, const unsigned char *buf, size_t len)
 	const int fd = static_cast<mbedtls_net_context *>(ctx)->fd;
 	if (fd < 0)
 		return MBEDTLS_ERR_NET_INVALID_CONTEXT;
-#ifdef MSG_NOSIGNAL
+#if defined(MSG_NOSIGNAL) && !defined(__APPLE__)
 	const ssize_t ret = ::send(fd, buf, len, MSG_NOSIGNAL);
 #else
 	int one = 1; // macOS: per-socket option instead of a send flag

@@ -47,13 +47,16 @@ if(ENABLE_QT)
 endif()
 
 # Dependencies shipped by obs-deps on Windows and macOS (same versions as the ones bundled with OBS
-# itself). On Linux, OBS uses the distribution's libraries: see cmake/linux/camdrop-dependencies.cmake.
+# itself, see cmake/macos/camdrop-dependencies.cmake). On Linux, OBS uses the distribution's
+# libraries: see cmake/linux/camdrop-dependencies.cmake.
 if(OS_LINUX)
   include(camdrop-dependencies)
   find_package(Threads REQUIRED)
   target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE Threads::Threads)
   # Keep the statically linked mbedTLS / libdatachannel symbols private to the plugin.
   target_link_options(${CMAKE_PROJECT_NAME} PRIVATE "LINKER:--exclude-libs,ALL")
+elseif(OS_MACOS)
+  include(camdrop-dependencies)
 else()
   find_package(LibDataChannel REQUIRED)
   find_package(MbedTLS REQUIRED)
