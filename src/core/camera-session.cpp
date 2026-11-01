@@ -508,6 +508,11 @@ void CameraSession::tick(int64_t now)
 	last_packets_ = packets;
 	last_lost_ = lost;
 
+	if (state == "signaling" && !pc && now - state_since > kConnectTimeoutNs) {
+		// Joined but never sent an offer: free the slot.
+		close("timeout", true);
+		return;
+	}
 	if ((state == "connecting" || state == "signaling") && now - state_since > kConnectTimeoutNs && pc) {
 		obs_log(LOG_WARNING, "[%s] WebRTC connection timed out (firewall or Wi-Fi isolation?)", name_.c_str());
 		set_state("failed");

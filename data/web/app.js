@@ -101,12 +101,46 @@ function audioConstraints() {
 	};
 }
 
+// Test mode (?test=clock): replaces the camera by a picture of the current time encoded as 32
+// black/white blocks, so that the latency up to OBS can be measured on the same machine.
+function clockStream() {
+	const height = Number($('quality').value) || 720;
+	const canvas = document.createElement('canvas');
+	canvas.width = Math.round((height * 16) / 9);
+	canvas.height = height;
+	const ctx = canvas.getContext('2d');
+	const draw = () => {
+		const now = Date.now();
+		const value = now % 4294967296;
+		ctx.fillStyle = '#404040';
+		ctx.fillRect(0, 0, canvas.width, canvas.height);
+		const block = Math.floor(canvas.width / 32);
+		for (let i = 0; i < 32; i++) {
+			const bit = Math.floor(value / 2 ** (31 - i)) % 2;
+			ctx.fillStyle = bit ? '#ffffff' : '#000000';
+			ctx.fillRect(i * block, 0, block, Math.floor(canvas.height / 6));
+		}
+		ctx.fillStyle = '#ffffff';
+		ctx.font = `${Math.floor(canvas.height / 8)}px monospace`;
+		ctx.fillText(String(now), 20, canvas.height / 2);
+	};
+	draw();
+	setInterval(draw, 1000 / (Number($('fps').value) || 30));
+	return canvas.captureStream(Number($('fps').value) || 30);
+}
+
 async function openCamera() {
 	if (state.stream) state.stream.getTracks().forEach((tr) => tr.stop());
 	state.stream = null;
 	let stream;
 	try {
-		stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints(), audio: audioConstraints() });
+		if (new URLSearchParams(location.search).get('test') === 'clock') {
+			stream = clockStream();
+			const mic = audioConstraints();
+			if (mic) (await navigator.mediaDevices.getUserMedia({ audio: mic })).getAudioTracks().forEach((tr) => stream.addTrack(tr));
+		} else {
+			stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints(), audio: audioConstraints() });
+		}
 	} catch (err) {
 		if (state.deviceId && err && err.name === 'OverconstrainedError') {
 			state.deviceId = '';
@@ -283,6 +317,7 @@ function connect() {
 				welcomed = true;
 				state.welcome = msg;
 				state.reconnectAttempt = 0;
+				await applyServerVideoSettings(msg.video || {});
 				await createPeer();
 				break;
 			case 'answer':
@@ -336,6 +371,27 @@ function connect() {
 		setStatus(welcomed ? 'stReconnecting' : 'errServer', 'bad');
 		scheduleReconnect();
 	};
+}
+
+// OBS decides the default resolution and frame rate; a choice made on the phone wins.
+async function applyServerVideoSettings(video) {
+	let changed = false;
+	const apply = (id, value) => {
+		if (!value || store.get(id + '.user', '') === '1') return;
+		const select = $(id);
+		if (select.value === String(value) || ![...select.options].some((o) => o.value === String(value))) return;
+		select.value = String(value);
+		changed = true;
+	};
+	apply('quality', video.height);
+	apply('fps', video.fps);
+	if (changed) {
+		try {
+			await openCamera();
+		} catch (err) {
+			console.warn('camera', err);
+		}
+	}
 }
 
 function scheduleReconnect() {
@@ -733,6 +789,7 @@ function init() {
 		reopenCamera();
 	});
 	$('flip').addEventListener('click', flipCamera);
+	['quality', 'fps'].forEach((id) => $(id).addEventListener('change', () => store.set(id + '.user', '1')));
 	['quality', 'fps', 'mic', 'processing'].forEach((id) => $(id).addEventListener('change', reopenCamera));
 	$('stop').addEventListener('click', () => stop());
 	$('mute').addEventListener('click', toggleMute);

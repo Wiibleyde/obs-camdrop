@@ -140,7 +140,7 @@ bool App::start_server_locked(std::string &error)
 		notify();
 		return false;
 	}
-	cert_pem_ = creds.cert_pem;
+	set_cert_pem(creds.cert_pem);
 
 	server_ = std::make_unique<Server>([this](const HttpRequest &req,
 						  const PeerInfo &peer) { return handle_http(req, peer); },
@@ -207,7 +207,7 @@ bool App::regenerate_certificate(std::string &error)
 	if (server_ && !settings_.custom_cert) {
 		if (!server_->set_credentials(creds, error))
 			return false;
-		cert_pem_ = creds.cert_pem;
+		set_cert_pem(creds.cert_pem);
 	}
 	notify();
 	return true;
@@ -233,6 +233,13 @@ App::Status App::status() const
 			st.cert_summary = info.subject + " — " + info.valid_to;
 	}
 	return st;
+}
+
+void App::set_cert_pem(const std::string &pem)
+{
+	cert_pem_ = pem;
+	std::lock_guard<std::mutex> lock(served_cert_mutex_);
+	served_cert_pem_ = settings_.custom_cert ? std::string() : pem;
 }
 
 int App::add_listener(std::function<void()> fn)
@@ -283,7 +290,7 @@ void App::watch_loop()
 		TlsCredentials creds;
 		std::string error;
 		if (load_credentials(creds, error) && server_->set_credentials(creds, error)) {
-			cert_pem_ = creds.cert_pem;
+			set_cert_pem(creds.cert_pem);
 			obs_log(LOG_INFO, "Certificate reloaded from %s", settings_.cert_path.c_str());
 			notify();
 		} else {
@@ -324,9 +331,8 @@ HttpResponse App::handle_http(const HttpRequest &req, const PeerInfo &peer)
 	} else if (req.path == "/camdrop.crt") {
 		std::string pem;
 		{
-			std::lock_guard<std::recursive_mutex> lock(mutex_);
-			if (!settings_.custom_cert)
-				pem = cert_pem_;
+			std::lock_guard<std::mutex> lock(served_cert_mutex_);
+			pem = served_cert_pem_;
 		}
 		auto der = certificate_der(pem);
 		if (der.empty()) {

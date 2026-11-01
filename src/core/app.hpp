@@ -62,6 +62,11 @@ private:
 	std::unique_ptr<Server> server_;
 	std::string last_error_;
 	std::string cert_pem_;
+	// Copy of the self-signed certificate served at /camdrop.crt. Server threads read it without
+	// taking `mutex_`, which is held while the server stops (and joins those threads).
+	mutable std::mutex served_cert_mutex_;
+	std::string served_cert_pem_;
+	void set_cert_pem(const std::string &pem);
 	std::string web_root_;
 	int64_t cert_mtime_ = 0;
 	int64_t key_mtime_ = 0;
