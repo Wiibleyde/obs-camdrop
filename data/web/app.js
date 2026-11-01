@@ -374,6 +374,7 @@ async function start(event) {
 			return showSetupError(err.message);
 		}
 	}
+	if (!state.stream || !state.stream.getTracks().length) return showSetupError(t('errNothing'));
 
 	state.running = true;
 	state.reconnectAttempt = 0;
@@ -782,6 +783,7 @@ function setTally(value) {
 	const shown = state.running && state.tallyEnabled && (state.tally === 'program' || state.tally === 'preview');
 	const el = $('tally');
 	el.hidden = !shown;
+	document.body.classList.toggle('tally-on', shown);
 	el.classList.toggle('program', state.tally === 'program');
 	el.classList.toggle('preview', state.tally === 'preview');
 	$('tally-label').textContent = state.tally === 'program' ? t('tallyProgram') : state.tally === 'preview' ? t('tallyPreview') : '';

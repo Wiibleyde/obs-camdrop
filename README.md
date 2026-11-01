@@ -13,6 +13,8 @@ camera and microphone, tap **Start**: the camera becomes an OBS source with 100â
 | Phone | Settings (Tools â†’ Camdrop) | Supervision dock |
 | --- | --- | --- |
 | <img src="docs/images/phone-setup.png" width="220" alt="Camera page on a phone"> | <img src="docs/images/settings.png" width="360" alt="Camdrop settings with QR code"> | <img src="docs/images/dock.png" width="220" alt="Supervision dock with four cameras"> |
+| **Phone on air (tally)** | | **Remote controls in the dock** |
+| <img src="docs/images/phone-tally.png" width="220" alt="Phone page with the red on-air tally border"> | | <img src="docs/images/dock-controls.png" width="220" alt="Dock card with camera controls and on-air badge"> |
 
 ## Features
 

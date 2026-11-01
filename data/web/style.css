@@ -234,17 +234,31 @@ button:disabled {
 	white-space: pre;
 }
 
-.overlay.warning {
-	bottom: calc(env(safe-area-inset-bottom) + 84px);
-	justify-content: center;
+.warnings {
+	flex-basis: 100%;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 6px;
+	margin-bottom: 4px;
 }
 
-.overlay.warning span {
+.warnings span {
 	background: rgba(229, 72, 77, 0.92);
 	padding: 8px 12px;
 	border-radius: 10px;
 	font-size: 0.9rem;
 	text-align: center;
+	max-width: 100%;
+}
+
+/* Room for the tally label above the status pills */
+body.tally-on .overlay.top {
+	top: calc(env(safe-area-inset-top) + 26px);
+}
+
+body.tally-on .overlay.stats {
+	top: calc(env(safe-area-inset-top) + 82px);
 }
 
 .pill {
@@ -332,7 +346,7 @@ button:disabled {
 }
 
 .tally span {
-	margin-top: calc(env(safe-area-inset-top) + 4px);
+	margin-top: env(safe-area-inset-top);
 	padding: 2px 12px;
 	border-radius: 0 0 10px 10px;
 	font-weight: 700;
@@ -377,7 +391,7 @@ button:disabled {
 	position: absolute;
 	left: 16px;
 	right: 16px;
-	bottom: calc(env(safe-area-inset-bottom) + 140px);
+	top: calc(env(safe-area-inset-top) + 120px);
 	padding: 10px 14px;
 	border-radius: 10px;
 	background: rgba(0, 0, 0, 0.8);

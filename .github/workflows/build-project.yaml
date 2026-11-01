@@ -73,7 +73,7 @@ jobs:
 
   macos-build:
     name: Build for macOS 🍏
-    runs-on: macos-15
+    runs-on: macos-26
     needs: check-event
     defaults:
       run:
@@ -90,8 +90,11 @@ jobs:
           : Set Up Environment 🔧
           if (( ${+RUNNER_DEBUG} )) setopt XTRACE
 
-          print '::group::Xcode'
+          print '::group::Select Xcode 26 (OBS 32.2 needs the macOS 26.5 SDK)'
+          local -a xcodes=(/Applications/Xcode_26*.app(N/nOn))
+          if (( #xcodes )) sudo xcode-select --switch ${xcodes[1]}/Contents/Developer
           xcodebuild -version
+          xcrun --show-sdk-version
           print '::endgroup::'
 
           print '::group::Clean Homebrew Environment'
