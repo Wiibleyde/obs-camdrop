@@ -116,6 +116,11 @@ void CameraSession::handle_telemetry(const json &message)
 			t[k] = *it;
 	}
 
+	// The browser measures the round-trip time from our receiver reports; libdatachannel has no
+	// RTT estimate without a data channel. It drives the NACK retry interval.
+	if (t.contains("rtt") && t["rtt"].get<double>() > 0)
+		rtt_ms_ = static_cast<int>(std::clamp(t["rtt"].get<double>(), 1.0, 2000.0));
+
 	std::lock_guard<std::mutex> lock(mutex_);
 	telemetry_ = std::move(t);
 	telemetry_ns_ = now_ns();

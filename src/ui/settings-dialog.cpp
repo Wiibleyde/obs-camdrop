@@ -98,7 +98,8 @@ void maybe_snapshot()
 			if (main)
 				main->grab().save(path + QStringLiteral("/main.png"));
 			// Show the supervision dock floating, then capture the real screen (CEF draws natively).
-			if (auto *dock = main ? main->findChild<QDockWidget *>(QStringLiteral("camdrop-supervision")) : nullptr) {
+			if (auto *dock = main ? main->findChild<QDockWidget *>(QStringLiteral("camdrop-supervision"))
+					      : nullptr) {
 				dock->setFloating(true);
 				dock->resize(380, 520);
 				dock->move(80, 80);
