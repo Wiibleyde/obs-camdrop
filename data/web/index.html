@@ -38,7 +38,7 @@
 
 				<div class="row">
 					<label class="grow">
-						<span data-i18n="camera">Camera</span>
+						<span data-i18n="videoSource">Video</span>
 						<select id="camera"></select>
 					</label>
 					<button type="button" id="flip" class="icon-button" data-i18n-title="flip" title="Switch camera" aria-label="Switch camera">⟲</button>
@@ -60,9 +60,9 @@
 						</select>
 					</label>
 				</div>
-				<label class="check">
-					<input type="checkbox" id="mic" checked>
-					<span data-i18n="microphone">Send the microphone</span>
+				<label>
+					<span data-i18n="microphone">Microphone</span>
+					<select id="mic"></select>
 				</label>
 				<label class="check">
 					<input type="checkbox" id="processing">
@@ -88,9 +88,15 @@
 				<button type="button" id="mute" class="secondary" data-i18n="mute">Mute</button>
 				<button type="button" id="stop" class="danger" data-i18n="stop">Stop</button>
 			</div>
+			<div id="live-audio-only" class="audio-only" data-i18n="audioOnly" hidden>Audio only</div>
+			<div id="rotate-hint" class="rotate-hint" hidden></div>
 			<div id="warning" class="overlay warning" hidden></div>
+			<div id="toast" class="toast" role="status" hidden></div>
 			<div id="identify" class="identify" hidden></div>
 		</section>
+
+		<!-- Tally light: red when the camera is on air in OBS, green when it is in the preview -->
+		<div id="tally" class="tally" hidden><span id="tally-label"></span></div>
 
 		<!-- Economy mode: black screen over the preview, tap to leave -->
 		<div id="economy-screen" class="economy" hidden>

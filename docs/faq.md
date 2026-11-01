@@ -59,6 +59,26 @@ shows it immediately; the camera reconnects by itself when the page comes back.
 - Chrome can show the certificate warning again after an update; accept it again or use a real
   certificate.
 
+## The picture turns when the phone turns / the phone is mounted sideways
+
+Browsers send portrait pictures when the phone is held upright and landscape ones otherwise. Give the
+item the bounding box *Scale to inner bounds* (Ctrl+F, *Fit to screen*) so the layout does not move.
+To force an orientation, choose it in *Tools → Camdrop → Requested from the cameras → Orientation*:
+the phone then shows a reminder when it is held the wrong way (Android also locks the orientation
+when possible). For a phone fixed sideways with its rotation lock on, use the *Rotation* setting of
+the source.
+
+## H.265 / HEVC is not used
+
+The browser must offer H.265 for WebRTC: Safari on recent iOS and macOS, Chrome or Edge only with a
+hardware encoder and depending on the version. Otherwise Camdrop falls back to H.264 or VP8 by
+itself; the dock shows the codec in use.
+
+## The tally light does not show
+
+It is enabled in *Tools → Camdrop → Studio*. Red means the source is in the program output, green
+that it is shown elsewhere (studio-mode preview, projector, properties window).
+
 ## Audio and video are not in sync
 
 Camdrop synchronises audio and video with the timestamps sent by the browser. OBS adds its own audio
@@ -71,12 +91,14 @@ The camera uses the largest buffer requested by the sources that show it.
 
 ## Where are the settings and the certificate stored?
 
-`%APPDATA%\obs-studio\plugin_config\camdrop\` (`settings.json`, `camdrop-cert.pem`,
-`camdrop-key.pem`). Delete the folder to reset Camdrop.
+In the `plugin_config/camdrop` folder of the OBS configuration (`settings.json`, `camdrop-cert.pem`,
+`camdrop-key.pem`): `%APPDATA%\obs-studio\` on Windows, `~/Library/Application Support/obs-studio/`
+on macOS, `~/.config/obs-studio/` on Linux. Delete the folder to reset Camdrop.
 
 ## Which OBS versions are supported?
 
-OBS 32.2 and newer (Windows 64-bit). OBS 32.0 and 32.1 ship an older FFmpeg and cannot load this build.
+OBS 32.2 and newer on Windows 64-bit, macOS 12+ and Ubuntu 24.04 (PPA). OBS 32.0 and 32.1 ship an
+older FFmpeg and cannot load the Windows and macOS builds.
 
 ## Logs
 

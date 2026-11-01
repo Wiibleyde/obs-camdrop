@@ -2,6 +2,22 @@
 
 All notable changes to this project are documented here. Versions follow [SemVer](https://semver.org).
 
+## [0.2.0] - unreleased
+
+- Tally light on the phones (red on air, green in the studio-mode preview) and in the dock.
+- Remote control from the dock: camera / lens, zoom, torch, resolution, frame rate, microphone
+  mute, video off.
+- New cameras get a source in the current scene automatically (fitted to the canvas, hidden while
+  streaming or recording, preview scene in studio mode).
+- Phone page: screen sharing (desktop browsers), audio-only mode, microphone choice.
+- Rotation setting per source; requested orientation with a reminder on the phone (and orientation
+  lock on Android).
+- H.265 / HEVC reception (RFC 7798) with hardware decoding, 10-bit (Main 10) pixel formats.
+- obs-websocket vendor `camdrop`: `GetCameras`, `SetCameraControl`, `RequestKeyframe`, `Identify`,
+  `Disconnect`, events `CameraConnected` / `CameraDisconnected`.
+- macOS (universal) and Ubuntu 24.04 builds.
+- Dock cards are updated in place (controls keep their state between refreshes).
+
 ## [0.1.0] - unreleased
 
 First version.

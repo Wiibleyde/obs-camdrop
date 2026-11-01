@@ -1,12 +1,14 @@
-// POSIX (macOS / Linux) implementation of the platform module. Not shipped in v1, kept compiling
-// so that the ports only need testing.
+// POSIX (macOS / Linux) implementation of the platform module.
 
 #include <cstdio>
 
 #include "platform/platform.hpp"
 
+#include <mbedtls/net_sockets.h>
+
 #include <arpa/inet.h>
 #include <cerrno>
+#include <fcntl.h>
 #include <ifaddrs.h>
 #include <poll.h>
 #include <sys/socket.h>
@@ -49,11 +51,12 @@ std::vector<LocalAddress> local_ipv4_addresses()
 
 int create_tcp_listener(const char *bind_ip, int port, std::string &error)
 {
-	int s = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, IPPROTO_TCP);
+	int s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (s < 0) {
 		error = "socket() failed";
 		return -1;
 	}
+	fcntl(s, F_SETFD, FD_CLOEXEC); // macOS has no SOCK_CLOEXEC
 	int one = 1;
 	setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
 	sockaddr_in addr{};
@@ -92,6 +95,27 @@ int peek_first_byte(int fd, int timeout_ms)
 	if (n != 1)
 		return -1;
 	return c;
+}
+
+int net_send(void *ctx, const unsigned char *buf, size_t len)
+{
+	const int fd = static_cast<mbedtls_net_context *>(ctx)->fd;
+	if (fd < 0)
+		return MBEDTLS_ERR_NET_INVALID_CONTEXT;
+#ifdef MSG_NOSIGNAL
+	const ssize_t ret = ::send(fd, buf, len, MSG_NOSIGNAL);
+#else
+	int one = 1; // macOS: per-socket option instead of a send flag
+	setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &one, sizeof(one));
+	const ssize_t ret = ::send(fd, buf, len, 0);
+#endif
+	if (ret >= 0)
+		return static_cast<int>(ret);
+	if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
+		return MBEDTLS_ERR_SSL_WANT_WRITE;
+	if (errno == EPIPE || errno == ECONNRESET)
+		return MBEDTLS_ERR_NET_CONN_RESET;
+	return MBEDTLS_ERR_NET_SEND_FAILED;
 }
 
 std::string host_name()

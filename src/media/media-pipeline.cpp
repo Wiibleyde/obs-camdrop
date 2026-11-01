@@ -50,6 +50,12 @@ bool to_obs_format(int av_format, video_format &format, bool &full_range)
 	case AV_PIX_FMT_YUV444P:
 		format = VIDEO_FORMAT_I444;
 		return true;
+	case AV_PIX_FMT_P010LE:
+		format = VIDEO_FORMAT_P010; // H.265 Main 10, hardware decoded
+		return true;
+	case AV_PIX_FMT_YUV420P10LE:
+		format = VIDEO_FORMAT_I010; // H.265 Main 10, software decoded
+		return true;
 	default:
 		return false;
 	}
@@ -265,6 +271,10 @@ void MediaPipeline::output_frame(const AVFrame *frame, int64_t timestamp_ns)
 	video_colorspace cs = VIDEO_CS_601;
 	if (frame->colorspace == AVCOL_SPC_BT709)
 		cs = VIDEO_CS_709;
+	else if (frame->colorspace == AVCOL_SPC_BT2020_NCL)
+		cs = frame->color_trc == AVCOL_TRC_SMPTE2084      ? VIDEO_CS_2100_PQ
+		     : frame->color_trc == AVCOL_TRC_ARIB_STD_B67 ? VIDEO_CS_2100_HLG
+								  : VIDEO_CS_709;
 
 	obs_source_frame out = {};
 	for (int i = 0; i < 3; i++) {

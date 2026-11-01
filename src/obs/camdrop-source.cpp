@@ -33,6 +33,8 @@ public:
 	{
 		buffer_ms_ = static_cast<int>(obs_data_get_int(settings, "buffer_ms"));
 		audio_ = obs_data_get_bool(settings, "audio");
+		// Rotation applied by OBS when drawing (GPU), for phones mounted sideways.
+		obs_source_set_async_rotation(source_, static_cast<long>(obs_data_get_int(settings, "rotation")));
 		const std::string name = obs_data_get_string(settings, "client");
 
 		std::lock_guard<std::mutex> lock(mutex_);
@@ -71,6 +73,13 @@ public:
 	void channel_clear() override { obs_source_output_video(source_, nullptr); }
 
 	int sink_buffer_ms() const override { return buffer_ms_; }
+
+	int sink_tally() const override
+	{
+		if (obs_source_active(source_))
+			return Tally::Program;
+		return obs_source_showing(source_) ? Tally::Preview : Tally::Off;
+	}
 
 	std::string name() const
 	{
@@ -112,6 +121,13 @@ void source_defaults(obs_data_t *settings)
 	obs_data_set_default_int(settings, "buffer_ms", Channel::kDefaultBufferMs);
 	obs_data_set_default_bool(settings, "audio", true);
 	obs_data_set_default_string(settings, "client", "");
+	obs_data_set_default_int(settings, "rotation", 0);
+}
+
+// Program / preview visibility changed: update the tally light of the phones.
+void source_visibility_changed(void *)
+{
+	ClientManager::get().request_tally_update();
 }
 
 bool refresh_clicked(obs_properties_t *, obs_property_t *, void *)
@@ -175,6 +191,14 @@ obs_properties_t *source_properties(void *data)
 
 	obs_properties_add_bool(props, "audio", obs_module_text("Source.Audio"));
 
+	obs_property_t *rotation = obs_properties_add_list(props, "rotation", obs_module_text("Source.Rotation"),
+							   OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
+	obs_property_list_add_int(rotation, obs_module_text("Source.Rotation.None"), 0);
+	obs_property_list_add_int(rotation, obs_module_text("Source.Rotation.90"), 90);
+	obs_property_list_add_int(rotation, obs_module_text("Source.Rotation.180"), 180);
+	obs_property_list_add_int(rotation, obs_module_text("Source.Rotation.270"), 270);
+	obs_property_set_long_description(rotation, obs_module_text("Source.Rotation.Hint"));
+
 	if (g_open_settings)
 		obs_properties_add_button2(props, "open_settings", obs_module_text("Source.OpenSettings"),
 					   settings_clicked, nullptr);
@@ -201,6 +225,10 @@ void register_camdrop_source()
 	info.update = source_update;
 	info.get_defaults = source_defaults;
 	info.get_properties = source_properties;
+	info.activate = source_visibility_changed;
+	info.deactivate = source_visibility_changed;
+	info.show = source_visibility_changed;
+	info.hide = source_visibility_changed;
 	obs_register_source(&info);
 }
 

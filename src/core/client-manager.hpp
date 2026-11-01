@@ -6,6 +6,7 @@
 #include "util/json.hpp"
 
 #include <condition_variable>
+#include <functional>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -55,12 +56,27 @@ public:
 	void remove_dock(const WsConnection *ws);
 	void handle_dock_message(const json &message);
 
+	// Commands shared by the dock and obs-websocket: "keyframe", "identify", "kick" and "control"
+	// (with a "set" object). Returns false with `error` set when the camera or the command is unknown.
+	bool command(const std::string &camera_name, const std::string &type, const json &payload, std::string &error);
+	// Keeps only the remote-control fields the phone page understands, with valid values.
+	static json validate_control(const json &set);
+
+	// Sources call this when they become visible / hidden so that phones update their tally light.
+	void request_tally_update();
+
+	// Hooks run on the thread that handled the event (never under the manager's lock).
+	void set_join_hook(std::function<void(const std::string &name)> fn);
+	void set_leave_hook(std::function<void(const std::string &name, const std::string &reason)> fn);
+
 	// Called by sources when their camera list must refresh, etc.
 	Settings settings() const;
 
 private:
 	ClientManager() = default;
 	void maintenance_loop();
+	void update_tallies();
+	void run_command(const std::shared_ptr<CameraSession> &session, const std::string &type, const json &payload);
 
 	mutable std::mutex mutex_;
 	Settings settings_;
@@ -82,6 +98,11 @@ private:
 	std::mutex thread_mutex_;
 	std::condition_variable cv_;
 	bool running_ = false;
+	bool tally_dirty_ = false;
+
+	std::mutex hooks_mutex_;
+	std::function<void(const std::string &)> join_hook_;
+	std::function<void(const std::string &, const std::string &)> leave_hook_;
 };
 
 } // namespace camdrop

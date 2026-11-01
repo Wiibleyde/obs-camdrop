@@ -311,6 +311,80 @@ button:disabled {
 	}
 }
 
+/* Tally light (above the economy screen, below the identify flash) */
+.tally {
+	position: fixed;
+	inset: 0;
+	pointer-events: none;
+	z-index: 15;
+	border: 8px solid transparent;
+	display: flex;
+	justify-content: center;
+	align-items: flex-start;
+}
+
+.tally.program {
+	border-color: var(--bad);
+}
+
+.tally.preview {
+	border-color: var(--good);
+}
+
+.tally span {
+	margin-top: calc(env(safe-area-inset-top) + 4px);
+	padding: 2px 12px;
+	border-radius: 0 0 10px 10px;
+	font-weight: 700;
+	font-size: 0.85rem;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: #fff;
+}
+
+.tally.program span {
+	background: var(--bad);
+}
+
+.tally.preview span {
+	background: var(--good);
+}
+
+.audio-only {
+	position: absolute;
+	inset: 0;
+	display: grid;
+	place-items: center;
+	color: var(--muted);
+	font-size: 1.1rem;
+	pointer-events: none;
+}
+
+.rotate-hint {
+	position: absolute;
+	left: 16px;
+	right: 16px;
+	top: 40%;
+	padding: 16px;
+	border-radius: 14px;
+	background: rgba(245, 165, 36, 0.95);
+	color: #111;
+	font-weight: 600;
+	text-align: center;
+}
+
+.toast {
+	position: absolute;
+	left: 16px;
+	right: 16px;
+	bottom: calc(env(safe-area-inset-bottom) + 140px);
+	padding: 10px 14px;
+	border-radius: 10px;
+	background: rgba(0, 0, 0, 0.8);
+	text-align: center;
+	font-size: 0.9rem;
+}
+
 [hidden] {
 	display: none !important;
 }

@@ -8,13 +8,13 @@
 
 namespace camdrop {
 
-enum class VideoCodec { Unknown, H264, VP8 };
+enum class VideoCodec { Unknown, H264, VP8, H265 };
 
 const char *video_codec_name(VideoCodec codec);
 
 struct EncodedVideoFrame {
 	VideoCodec codec = VideoCodec::Unknown;
-	std::vector<uint8_t> data; // H.264 Annex B access unit, or a VP8 frame
+	std::vector<uint8_t> data; // H.264 / H.265 Annex B access unit, or a VP8 frame
 	uint32_t rtp_timestamp = 0;
 	bool keyframe = false;
 	int64_t first_arrival_ns = 0;

@@ -75,6 +75,41 @@ bool h264_payload_has_keyframe_nal(const std::vector<uint8_t> &p)
 	return false;
 }
 
+// H.265 (RFC 7798): two-byte NAL unit header, type in bits 1-6 of the first byte.
+inline uint8_t h265_type(uint8_t first_byte)
+{
+	return static_cast<uint8_t>((first_byte >> 1) & 0x3F);
+}
+
+// IRAP pictures (BLA, IDR, CRA) and parameter sets.
+bool h265_is_keyframe_type(uint8_t type)
+{
+	return (type >= 16 && type <= 21) || type == 32 || type == 33;
+}
+
+bool h265_payload_has_keyframe_nal(const std::vector<uint8_t> &p)
+{
+	if (p.size() < 2)
+		return false;
+	const uint8_t type = h265_type(p[0]);
+	if (type == 48) { // aggregation packet
+		size_t pos = 2;
+		while (pos + 2 < p.size()) {
+			const size_t n = rd16(&p[pos]);
+			pos += 2;
+			if (n < 2 || pos + n > p.size())
+				break;
+			if (h265_is_keyframe_type(h265_type(p[pos])))
+				return true;
+			pos += n;
+		}
+		return false;
+	}
+	if (type == 49) // fragmentation unit
+		return p.size() >= 3 && h265_is_keyframe_type(p[2] & 0x3F);
+	return h265_is_keyframe_type(type);
+}
+
 } // namespace
 
 const char *video_codec_name(VideoCodec codec)
@@ -84,6 +119,8 @@ const char *video_codec_name(VideoCodec codec)
 		return "H.264";
 	case VideoCodec::VP8:
 		return "VP8";
+	case VideoCodec::H265:
+		return "H.265";
 	default:
 		return "?";
 	}
@@ -124,6 +161,18 @@ bool VideoReceiver::is_frame_start(int64_t ext) const
 		}
 		return false;
 	}
+	case VideoCodec::H265: {
+		if (p.payload.size() < 2)
+			return false;
+		const uint8_t type = h265_type(p.payload[0]);
+		if (type == 32 || type == 35)
+			return true; // VPS or access unit delimiter
+		if (type == 48 && p.payload.size() > 4) {
+			const uint8_t first = h265_type(p.payload[4]);
+			return first == 32 || first == 35;
+		}
+		return false;
+	}
 	case VideoCodec::VP8:
 		return vp8_is_partition_start(p.payload);
 	default:
@@ -144,10 +193,13 @@ bool VideoReceiver::frame_is_keyframe(int64_t first, int64_t last) const
 		const size_t d = vp8_descriptor_size(p);
 		return d > 0 && (p[d] & 0x01) == 0;
 	}
-	if (codec == VideoCodec::H264) {
+	if (codec == VideoCodec::H264 || codec == VideoCodec::H265) {
 		for (int64_t e = first; e <= last; e++) {
 			auto p = packets_.find(e);
-			if (p != packets_.end() && h264_payload_has_keyframe_nal(p->second.payload))
+			if (p == packets_.end())
+				continue;
+			if (codec == VideoCodec::H264 ? h264_payload_has_keyframe_nal(p->second.payload)
+						      : h265_payload_has_keyframe_nal(p->second.payload))
 				return true;
 		}
 	}
@@ -221,6 +273,34 @@ EncodedVideoFrame VideoReceiver::assemble(int64_t first, int64_t last) const
 					frame.data.push_back(static_cast<uint8_t>((p[0] & 0xE0) | (p[1] & 0x1F)));
 				}
 				frame.data.insert(frame.data.end(), p.begin() + 2, p.end());
+			}
+		} else if (frame.codec == VideoCodec::H265) {
+			if (p.size() < 2)
+				continue;
+			const uint8_t type = h265_type(p[0]);
+			if (type < 48) {
+				frame.data.insert(frame.data.end(), kStartCode, kStartCode + 4);
+				frame.data.insert(frame.data.end(), p.begin(), p.end());
+			} else if (type == 48) {
+				size_t pos = 2;
+				while (pos + 2 <= p.size()) {
+					const size_t n = rd16(&p[pos]);
+					pos += 2;
+					if (n == 0 || pos + n > p.size())
+						break;
+					frame.data.insert(frame.data.end(), kStartCode, kStartCode + 4);
+					frame.data.insert(frame.data.end(), p.begin() + static_cast<ptrdiff_t>(pos),
+							  p.begin() + static_cast<ptrdiff_t>(pos + n));
+					pos += n;
+				}
+			} else if (type == 49 && p.size() > 3) {
+				if (p[2] & 0x80) { // start of the fragmented NAL unit: rebuild its header
+					frame.data.insert(frame.data.end(), kStartCode, kStartCode + 4);
+					frame.data.push_back(
+						static_cast<uint8_t>((p[0] & 0x81) | ((p[2] & 0x3F) << 1)));
+					frame.data.push_back(p[1]);
+				}
+				frame.data.insert(frame.data.end(), p.begin() + 3, p.end());
 			}
 		} else if (frame.codec == VideoCodec::VP8) {
 			const size_t d = vp8_descriptor_size(p);

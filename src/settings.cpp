@@ -61,11 +61,18 @@ Settings load_settings()
 		if (obs_data_has_user_value(data, "max_bitrate_kbps"))
 			s.max_bitrate_kbps = clamp_int(obs_data_get_int(data, "max_bitrate_kbps"), 300, 50000);
 		std::string codec = obs_data_get_string(data, "preferred_codec");
-		if (codec == "h264" || codec == "vp8")
+		if (codec == "h264" || codec == "h265" || codec == "vp8")
 			s.preferred_codec = codec;
 		if (obs_data_has_user_value(data, "hw_decode"))
 			s.hw_decode = obs_data_get_bool(data, "hw_decode");
 		s.opus_10ms = obs_data_get_bool(data, "opus_10ms");
+		std::string orientation = obs_data_get_string(data, "orientation");
+		if (orientation == "any" || orientation == "landscape" || orientation == "portrait")
+			s.orientation = orientation;
+		if (obs_data_has_user_value(data, "tally"))
+			s.tally = obs_data_get_bool(data, "tally");
+		if (obs_data_has_user_value(data, "auto_add_sources"))
+			s.auto_add_sources = obs_data_get_bool(data, "auto_add_sources");
 		obs_data_release(data);
 	} else {
 		needs_save = true;
@@ -103,6 +110,9 @@ bool save_settings(const Settings &s)
 	obs_data_set_string(data, "preferred_codec", s.preferred_codec.c_str());
 	obs_data_set_bool(data, "hw_decode", s.hw_decode);
 	obs_data_set_bool(data, "opus_10ms", s.opus_10ms);
+	obs_data_set_string(data, "orientation", s.orientation.c_str());
+	obs_data_set_bool(data, "tally", s.tally);
+	obs_data_set_bool(data, "auto_add_sources", s.auto_add_sources);
 
 	const std::string path = config_file_path("settings.json");
 	bool ok = obs_data_save_json_safe(data, path.c_str(), "tmp", "bak");

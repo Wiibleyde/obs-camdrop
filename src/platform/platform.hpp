@@ -31,6 +31,10 @@ int create_tcp_listener(const char *bind_ip, int port, std::string &error);
 // -1 on error/close, -2 on timeout.
 int peek_first_byte(int fd, int timeout_ms);
 
+// mbedTLS send callback (context: mbedtls_net_context). Unlike mbedtls_net_send, a peer that went
+// away never raises SIGPIPE on Linux and macOS.
+int net_send(void *ctx, const unsigned char *buf, size_t len);
+
 // Address ranges accepted by the server: loopback, RFC 1918, link-local, CGNAT (Tailscale).
 inline bool is_local_ipv4(const uint8_t ip[4])
 {

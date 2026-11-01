@@ -62,6 +62,9 @@ private:
 	QComboBox *codec_;
 	QCheckBox *hw_decode_;
 	QCheckBox *opus_10ms_;
+	QComboBox *orientation_;
+	QCheckBox *tally_;
+	QCheckBox *auto_add_;
 	QLabel *status_;
 	QComboBox *urls_;
 	QLabel *qr_;

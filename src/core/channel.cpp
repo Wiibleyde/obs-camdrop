@@ -63,6 +63,27 @@ int Channel::buffer_ms() const
 	return value;
 }
 
+int Channel::tally() const
+{
+	std::lock_guard<std::mutex> lock(mutex_);
+	int value = Tally::Off;
+	for (const ChannelSink *sink : sinks_)
+		value = std::max(value, sink->sink_tally());
+	return value;
+}
+
+const char *Tally::name(int tally)
+{
+	switch (tally) {
+	case Tally::Program:
+		return "program";
+	case Tally::Preview:
+		return "preview";
+	default:
+		return "off";
+	}
+}
+
 void Channel::set_live(bool live, int64_t now_ns)
 {
 	live_ = live;

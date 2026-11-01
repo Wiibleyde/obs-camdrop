@@ -83,6 +83,8 @@ void CameraSession::handle_message(const json &message)
 		std::lock_guard<std::mutex> lock(mutex_);
 		hidden_ = json_get<bool>(message, "hidden", false);
 		telemetry_["visible"] = !hidden_;
+	} else if (type == "caps") {
+		handle_capabilities(message);
 	} else if (type == "keyframe") {
 		request_keyframe();
 	} else if (type == "ping") {
@@ -96,7 +98,8 @@ void CameraSession::handle_telemetry(const json &message)
 {
 	static const char *numeric[] = {"fps",     "width",   "height",     "kbps",          "rtt",       "jitter",
 					"lossPct", "battery", "targetKbps", "framesEncoded", "cpuLimited"};
-	static const char *strings[] = {"qualityLimitation", "pressure", "codec", "facing", "camera", "encoder"};
+	static const char *strings[] = {"qualityLimitation", "pressure",    "codec", "facing", "camera",
+					"encoder",           "orientation", "video"};
 	static const char *booleans[] = {"charging", "visible", "wakeLock", "economy", "muted"};
 
 	json t = json::object();
@@ -126,6 +129,77 @@ void CameraSession::handle_telemetry(const json &message)
 	telemetry_ns_ = now_ns();
 	if (telemetry_.contains("visible"))
 		hidden_ = !telemetry_["visible"].get<bool>();
+}
+
+namespace {
+
+// Copies a JSON value from the phone keeping only bounded, simple data.
+json sanitize_value(const json &v, int depth)
+{
+	if (v.is_boolean() || v.is_number())
+		return v;
+	if (v.is_string())
+		return v.get<std::string>().substr(0, 128);
+	if (depth <= 0)
+		return nullptr;
+	if (v.is_array()) {
+		json out = json::array();
+		for (const auto &item : v) {
+			if (out.size() >= 16)
+				break;
+			out.push_back(sanitize_value(item, depth - 1));
+		}
+		return out;
+	}
+	if (v.is_object()) {
+		json out = json::object();
+		for (auto it = v.begin(); it != v.end(); ++it) {
+			if (out.size() >= 24)
+				break;
+			out[it.key().substr(0, 32)] = sanitize_value(it.value(), depth - 1);
+		}
+		return out;
+	}
+	return nullptr;
+}
+
+} // namespace
+
+void CameraSession::handle_capabilities(const json &message)
+{
+	auto it = message.find("caps");
+	if (it == message.end() || !it->is_object())
+		return;
+	json caps = sanitize_value(*it, 3);
+	const std::string mode = json_get<std::string>(caps, "video", "camera");
+	bool clear = false;
+	{
+		std::lock_guard<std::mutex> lock(mutex_);
+		caps_ = std::move(caps);
+		clear = mode == "none" && video_mode_ != "none";
+		video_mode_ = mode;
+	}
+	// Audio only: do not leave the last picture frozen in OBS.
+	if (clear)
+		channel_->clear();
+}
+
+json CameraSession::capabilities() const
+{
+	std::lock_guard<std::mutex> lock(mutex_);
+	return caps_;
+}
+
+void CameraSession::send_control(const json &set)
+{
+	send({{"type", "control"}, {"set", set}});
+}
+
+void CameraSession::set_tally(int tally)
+{
+	if (tally_.exchange(tally) == tally)
+		return;
+	send({{"type", "tally"}, {"state", Tally::name(tally)}});
 }
 
 void CameraSession::handle_offer(const std::string &sdp)
@@ -302,6 +376,8 @@ void CameraSession::setup_track(const std::shared_ptr<rtc::Track> &track)
 				const std::string fmt = lower(map->format);
 				if (fmt == "h264") {
 					video_rx_.set_payload_codec(pt, VideoCodec::H264);
+				} else if (fmt == "h265") {
+					video_rx_.set_payload_codec(pt, VideoCodec::H265);
 				} else if (fmt == "vp8") {
 					video_rx_.set_payload_codec(pt, VideoCodec::VP8);
 				} else if (fmt == "rtx") {
@@ -561,12 +637,15 @@ json CameraSession::status() const
 		j["hidden"] = hidden_;
 		j["telemetry"] = telemetry_;
 		j["telemetryAge"] = telemetry_ns_ ? static_cast<double>(now - telemetry_ns_) / 1e9 : -1.0;
+		j["caps"] = caps_;
+		j["video"] = video_mode_;
 		pipeline = pipeline_;
 		vh = video_handler_;
 	}
 	j["rttMs"] = rtt_ms_.load();
 	j["lossPct"] = loss_pct_;
 	j["watchers"] = channel_->sink_count();
+	j["tally"] = Tally::name(channel_->tally());
 	if (pipeline) {
 		PipelineStats st = pipeline->stats();
 		j["fps"] = st.fps;

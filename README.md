@@ -21,11 +21,23 @@ camera and microphone, tap **Start**: the camera becomes an OBS source with 100�
   NACK/RTX retransmissions and key-frame requests instead of big buffers.
 - **Several cameras at once**, each selectable by name in a **Remote camera (Camdrop)** source; a
   camera that reconnects is picked up again automatically.
-- **Video + audio** (H.264 or VP8, Opus), audio/video synchronised with RTCP sender reports.
-- **Hardware decoding** (D3D11VA) with automatic software fallback.
+- **Video + audio** (H.264, H.265/HEVC when the browser offers it, VP8; Opus), audio/video
+  synchronised with RTCP sender reports.
+- **Hardware decoding** (D3D11VA, VideoToolbox, VAAPI) with automatic software fallback.
+- **Tally light**: the phone shows a red border when its source is on air and a green one when it is
+  in the studio-mode preview.
+- **Remote control from OBS**: from the dock, switch the camera or lens, zoom, torch, resolution,
+  frame rate, mute the microphone or turn the video off, without touching the phone.
+- **New cameras appear by themselves**: a source is added to the current scene (fitted to the
+  canvas, hidden if you are live) when a new camera connects.
 - **Supervision dock**: network, frame rate, delay, battery, CPU pressure and alerts for every camera.
-- **Phone side**: front/back camera, resolution and frame rate, screen kept awake (Wake Lock with a
-  fallback), economy mode (black screen), mute, live statistics.
+- **Phone side**: front/back camera, screen sharing from desktop browsers, audio only, microphone
+  choice, resolution and frame rate, screen kept awake (Wake Lock with a fallback), economy mode
+  (black screen), live statistics.
+- **Rotation**: per-source rotation for phones mounted sideways, and an orientation request
+  (landscape / portrait) that reminds the camera operator to turn the phone.
+- **Automation**: obs-websocket vendor requests for Stream Deck, Touch Portal, Bitfocus Companion or
+  scripts.
 - **Safe defaults**: server off until enabled, random access code, local network only, rate-limited
   code attempts, no telemetry.
 - English and French.
@@ -45,16 +57,24 @@ Based on public information at the time of writing; check each project for detai
 
 ## Requirements
 
-- Windows 10/11 64-bit, **OBS Studio 32.2 or newer** (the plugin uses the FFmpeg and libdatachannel
-  libraries shipped with OBS; 32.0/32.1 ship an older FFmpeg).
+- **OBS Studio 32.2 or newer** (the plugin uses the FFmpeg and libdatachannel libraries shipped with
+  OBS; 32.0/32.1 ship an older FFmpeg) on:
+  - Windows 10/11 64-bit;
+  - macOS 12 or newer (universal build, Apple Silicon and Intel);
+  - Ubuntu 24.04 with OBS from the official PPA (`ppa:obsproject/obs-studio`). Other distributions
+    and the Flatpak version of OBS need a build from source.
 - Phone and PC on the same network (Wi-Fi 5 GHz recommended, PC on Ethernet ideally).
-- macOS and Linux builds will come after v1 (the code is written to be portable).
 
 ## Installation
 
-1. Download `camdrop-x.y.z-windows-x64.zip` from the [releases](https://github.com/Wiibleyde/obs-camdrop/releases).
-2. Extract it into `C:\ProgramData\obs-studio\plugins` (you get `...\plugins\camdrop\bin\64bit\camdrop.dll`).
-3. Restart OBS.
+Download the file for your system from the [releases](https://github.com/Wiibleyde/obs-camdrop/releases),
+then restart OBS.
+
+- **Windows**: extract `camdrop-x.y.z-windows-x64.zip` into `C:\ProgramData\obs-studio\plugins`
+  (you get `...\plugins\camdrop\bin\64bit\camdrop.dll`).
+- **macOS**: open `camdrop-x.y.z-macos-universal.pkg`. The package is not notarized yet: if macOS
+  blocks it, right-click it and choose *Open*.
+- **Ubuntu**: `sudo apt install ./camdrop-x.y.z-x86_64-linux-gnu.deb`.
 
 ## Quick start
 
@@ -64,21 +84,49 @@ Based on public information at the time of writing; check each project for detai
 3. The first time, the browser warns about the certificate (self-signed): choose
    *Advanced → Continue*. To get rid of the warning, see the [HTTPS guide](docs/https.md).
 4. Enter the access code and a name (e.g. `Stage`), allow the camera, tap **Start**.
-5. In OBS, add a **Remote camera (Camdrop)** source and pick `Stage`. You can type the name before the
-   phone connects.
-6. **Docks → Camdrop** shows every camera with its alerts.
+5. A **Camdrop – Stage** source appears in the current scene. You can also add a **Remote camera
+   (Camdrop)** source yourself and pick `Stage` (even before the phone connects).
+6. **Docks → Camdrop** shows every camera with its alerts and, under *Camera controls*, its remote
+   controls.
 
 ## Settings
 
 **Plugin (Tools → Camdrop)**: server on/off, TCP port (page + signaling, default 7443), UDP port range
 for WebRTC (default 51000–51100), access code, maximum number of cameras (8), certificate
 (self-signed or imported PEM files, reloaded automatically when renewed), requested resolution,
-frame rate (30 or 60) and maximum bitrate, preferred codec (H.264 or VP8), hardware decoding,
-10 ms Opus frames.
+frame rate (30 or 60) and maximum bitrate, preferred codec (H.264, H.265 or VP8), orientation
+(any, landscape, portrait), hardware decoding, 10 ms Opus frames. *Studio* tab: tally light on the
+phones, automatic sources for new cameras.
 
-**Source**: camera name, **buffer (ms)**, audio on/off. The buffer is the delay used to absorb network
-jitter: 40–60 ms on a good network, 80–150 ms on a busy Wi-Fi. When several sources show the same
-camera, the largest buffer applies.
+**Source**: camera name, **buffer (ms)**, audio on/off, rotation (0/90/180/270°). The buffer is the
+delay used to absorb network jitter: 40–60 ms on a good network, 80–150 ms on a busy Wi-Fi. When
+several sources show the same camera, the largest buffer applies.
+
+Rotating a phone switches its picture between landscape and portrait. With the bounding box *Scale
+to inner bounds* (what automatic sources use, and what *Fit to screen*, Ctrl+F, sets), the layout of
+the scene does not move when that happens.
+
+## Automation (obs-websocket)
+
+Camdrop registers the obs-websocket vendor `camdrop`. Send `CallVendorRequest` with
+`vendorName: "camdrop"` and one of these `requestType`s:
+
+| Request | Data | Effect |
+| --- | --- | --- |
+| `GetCameras` | – | Connected cameras: state, tally, resolution, fps, network, battery, controls |
+| `SetCameraControl` | `name` + any of `deviceId`, `facing` (`user`, `environment`, `toggle`), `zoom`, `torch`, `height` (480/720/1080), `fps` (30/60), `muted`, `video` (`camera`/`none`) | Changes the camera on the phone |
+| `RequestKeyframe` | `name` | Asks the phone for a key frame |
+| `Identify` | `name` | Flashes the phone screen |
+| `Disconnect` | `name` | Disconnects the phone |
+
+Responses contain `ok` (and `error` when it is false). The vendor also emits the events
+`CameraConnected` and `CameraDisconnected` (`name`, `reason`).
+
+```json
+{"op": 6, "d": {"requestType": "CallVendorRequest", "requestId": "1", "requestData": {
+  "vendorName": "camdrop", "requestType": "SetCameraControl",
+  "requestData": {"name": "Stage", "zoom": 2, "torch": true}}}}
+```
 
 ## Latency
 
@@ -113,7 +161,10 @@ cmake --build --preset windows-x64
 ```
 
 The first configuration downloads the OBS sources and `obs-deps` (FFmpeg, libdatachannel, mbedTLS,
-Qt) and builds libobs. See [CONTRIBUTING.md](CONTRIBUTING.md).
+Qt) and builds libobs. macOS uses the same flow (`cmake --preset macos`). On Ubuntu, install OBS from
+the PPA and the packages listed in `.github/scripts/utils.zsh/setup_ubuntu`, then
+`cmake --preset ubuntu-x86_64`: mbedTLS 3 and libdatachannel are downloaded and linked statically.
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ### How it works
 
@@ -125,8 +176,9 @@ Phone browser ──HTTPS──▶ page + WebSocket (signaling, telemetry) ─�
 
 - `src/net`: HTTPS + WebSocket server on one port (mbedTLS), self-signed certificate generation.
 - `src/core`: camera sessions, signaling, SDP tuning, named channels shared by sources.
-- `src/media`: RTP/RTCP, NACK/RTX, frame assembly, A/V clock sync, decoders, playout.
-- `src/obs`: the OBS source. `src/ui`: Qt settings dialog and dock. `data/web`: phone page and dock page.
+- `src/media`: RTP/RTCP, NACK/RTX, frame assembly (H.264, H.265, VP8), A/V clock sync, decoders, playout.
+- `src/obs`: the OBS source, automatic sources, obs-websocket vendor. `src/ui`: Qt settings dialog and
+  dock. `data/web`: phone page and dock page.
 - `src/platform`: the only OS-specific code (network interfaces, sockets).
 
 ## License

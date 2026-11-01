@@ -6,7 +6,11 @@
 #include <obs-frontend-api.h>
 #include <obs-module.h>
 
+#if __has_include(<qrcodegencpp/qrcodegen.hpp>)
 #include <qrcodegencpp/qrcodegen.hpp>
+#else
+#include <qrcodegen.hpp> // Debian / Ubuntu package
+#endif
 
 #include <QAction>
 #include <QApplication>
@@ -212,12 +216,33 @@ SettingsDialog::SettingsDialog(QWidget *parent) : QDialog(parent)
 	codec_ = new QComboBox(video_box);
 	codec_->addItem(QStringLiteral("H.264"), QStringLiteral("h264"));
 	codec_->addItem(QStringLiteral("VP8"), QStringLiteral("vp8"));
+	codec_->addItem(T("Settings.Codec.H265"), QStringLiteral("h265"));
 	video_form->addRow(T("Settings.Codec"), codec_);
 	hw_decode_ = new QCheckBox(T("Settings.HwDecode"), video_box);
 	video_form->addRow(QString(), hw_decode_);
 	opus_10ms_ = new QCheckBox(T("Settings.Opus10ms"), video_box);
 	video_form->addRow(QString(), opus_10ms_);
+	orientation_ = new QComboBox(video_box);
+	orientation_->addItem(T("Settings.Orientation.Any"), QStringLiteral("any"));
+	orientation_->addItem(T("Settings.Orientation.Landscape"), QStringLiteral("landscape"));
+	orientation_->addItem(T("Settings.Orientation.Portrait"), QStringLiteral("portrait"));
+	video_form->addRow(T("Settings.Orientation"), orientation_);
 	tabs->addTab(video_box, T("Settings.Video"));
+
+	// Studio integration
+	auto *studio_box = new QWidget(tabs);
+	auto *studio_layout = new QVBoxLayout(studio_box);
+	tally_ = new QCheckBox(T("Settings.Tally"), studio_box);
+	studio_layout->addWidget(tally_);
+	auto_add_ = new QCheckBox(T("Settings.AutoAdd"), studio_box);
+	auto_add_->setToolTip(T("Settings.AutoAdd.Hint"));
+	studio_layout->addWidget(auto_add_);
+	auto *auto_add_hint = new QLabel(T("Settings.AutoAdd.Hint"), studio_box);
+	auto_add_hint->setWordWrap(true);
+	auto_add_hint->setStyleSheet(QStringLiteral("color: #8a8f99; margin-left: 22px;"));
+	studio_layout->addWidget(auto_add_hint);
+	studio_layout->addStretch();
+	tabs->addTab(studio_box, T("Settings.Studio"));
 
 	// How to connect
 	connect_box_ = new QGroupBox(T("Settings.Connect"), this);
@@ -307,6 +332,10 @@ void SettingsDialog::load_from_settings()
 	codec_->setCurrentIndex(idx >= 0 ? idx : 0);
 	hw_decode_->setChecked(s.hw_decode);
 	opus_10ms_->setChecked(s.opus_10ms);
+	idx = orientation_->findData(QString::fromStdString(s.orientation));
+	orientation_->setCurrentIndex(idx >= 0 ? idx : 0);
+	tally_->setChecked(s.tally);
+	auto_add_->setChecked(s.auto_add_sources);
 	update_enabled_state();
 }
 
@@ -338,6 +367,9 @@ void SettingsDialog::apply()
 	s.preferred_codec = codec_->currentData().toString().toStdString();
 	s.hw_decode = hw_decode_->isChecked();
 	s.opus_10ms = opus_10ms_->isChecked();
+	s.orientation = orientation_->currentData().toString().toStdString();
+	s.tally = tally_->isChecked();
+	s.auto_add_sources = auto_add_->isChecked();
 
 	std::string error;
 	if (!App::get().apply(s, error)) {

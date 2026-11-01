@@ -180,7 +180,7 @@ struct Server::Connection : public WsConnection, public std::enable_shared_from_
 		size_t left = data.size();
 		const int64_t deadline = now_ms() + 10000;
 		while (left > 0) {
-			int ret = tls ? mbedtls_ssl_write(&ssl, p, left) : mbedtls_net_send(&net, p, left);
+			int ret = tls ? mbedtls_ssl_write(&ssl, p, left) : platform::net_send(&net, p, left);
 			if (ret > 0) {
 				p += ret;
 				left -= static_cast<size_t>(ret);
@@ -352,7 +352,7 @@ void Server::serve(const std::shared_ptr<Connection> &conn)
 		}
 		if (!conn->config || mbedtls_ssl_setup(&conn->ssl, &conn->config->conf) != 0)
 			return;
-		mbedtls_ssl_set_bio(&conn->ssl, &conn->net, mbedtls_net_send, nullptr, mbedtls_net_recv_timeout);
+		mbedtls_ssl_set_bio(&conn->ssl, &conn->net, platform::net_send, nullptr, mbedtls_net_recv_timeout);
 		conn->tls = true;
 
 		const int64_t deadline = now_ms() + kHandshakeTimeoutMs;

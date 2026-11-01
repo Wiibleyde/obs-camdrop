@@ -44,6 +44,16 @@ if (( ! (${skips[(Ie)all]} + ${skips[(Ie)deps]}) )) {
     libsimde-dev \
     obs-studio
 
+  # Camdrop: FFmpeg, OpenSSL (DTLS for libdatachannel), qrcodegen and nlohmann-json from the
+  # distribution; mbedTLS 3 and libdatachannel are built from source (see CMakeLists.txt).
+  sudo apt-get install ${apt_args} \
+    libavcodec-dev \
+    libavutil-dev \
+    libssl-dev \
+    libqrcodegencpp-dev \
+    nlohmann-json3-dev \
+    pkg-config
+
   local -a _qt_packages=()
 
   if (( QT_VERSION == 5 )) {

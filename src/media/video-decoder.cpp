@@ -72,8 +72,8 @@ bool VideoDecoder::open(VideoCodec codec, bool try_hardware)
 	codec_ = codec;
 	want_hardware_ = try_hardware;
 	hw_errors_ = 0;
-	// Hardware decoding only matters for H.264 (VP8 has no D3D11VA support).
-	if (try_hardware && codec == VideoCodec::H264 && open_internal(true))
+	// Hardware decoding for H.264 and H.265 (VP8 has no D3D11VA / VideoToolbox support).
+	if (try_hardware && (codec == VideoCodec::H264 || codec == VideoCodec::H265) && open_internal(true))
 		return true;
 	return open_internal(false);
 }
@@ -81,9 +81,20 @@ bool VideoDecoder::open(VideoCodec codec, bool try_hardware)
 bool VideoDecoder::open_internal(bool hardware)
 {
 	close();
-	const AVCodecID id = codec_ == VideoCodec::H264  ? AV_CODEC_ID_H264
-			     : codec_ == VideoCodec::VP8 ? AV_CODEC_ID_VP8
-							 : AV_CODEC_ID_NONE;
+	AVCodecID id = AV_CODEC_ID_NONE;
+	switch (codec_) {
+	case VideoCodec::H264:
+		id = AV_CODEC_ID_H264;
+		break;
+	case VideoCodec::H265:
+		id = AV_CODEC_ID_HEVC;
+		break;
+	case VideoCodec::VP8:
+		id = AV_CODEC_ID_VP8;
+		break;
+	default:
+		break;
+	}
 	const AVCodec *decoder = avcodec_find_decoder(id);
 	if (!decoder) {
 		obs_log(LOG_ERROR, "No FFmpeg decoder for %s", video_codec_name(codec_));
@@ -98,7 +109,7 @@ bool VideoDecoder::open_internal(bool hardware)
 	}
 
 	ctx_->flags |= AV_CODEC_FLAG_LOW_DELAY;
-	if (codec_ == VideoCodec::H264)
+	if (codec_ == VideoCodec::H264 || codec_ == VideoCodec::H265)
 		ctx_->flags2 |= AV_CODEC_FLAG2_FAST;
 	// Frame threading adds one frame of latency per thread: slice threading only.
 	ctx_->thread_type = FF_THREAD_SLICE;

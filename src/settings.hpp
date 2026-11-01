@@ -22,9 +22,13 @@ struct Settings {
 	int video_height = 720;               // requested capture height (480 / 720 / 1080)
 	int video_fps = 30;                   // 30 by default, 60 if the camera allows it
 	int max_bitrate_kbps = 5000;          // per client
-	std::string preferred_codec = "h264"; // "h264" or "vp8"
-	bool hw_decode = true;                // D3D11VA on Windows, software fallback
+	std::string preferred_codec = "h264"; // "h264", "h265" or "vp8"
+	bool hw_decode = true;                // D3D11VA / VideoToolbox / VAAPI, software fallback
 	bool opus_10ms = false;               // ask browsers for 10 ms Opus frames
+	std::string orientation = "any";      // "any", "landscape" or "portrait": hint shown on the phones
+
+	bool tally = true;            // red/green border on the phones when their source is in program/preview
+	bool auto_add_sources = true; // add a source to the current scene when a new camera joins
 
 	bool operator==(const Settings &o) const = default;
 };

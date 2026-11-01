@@ -25,6 +25,7 @@ if(ENABLE_FRONTEND_API)
   find_package(obs-frontend-api REQUIRED)
   target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE OBS::obs-frontend-api)
   target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE CAMDROP_HAVE_FRONTEND)
+  target_sources(${CMAKE_PROJECT_NAME} PRIVATE src/obs/auto-source.cpp src/obs/auto-source.hpp)
 endif()
 
 if(ENABLE_QT)
@@ -45,17 +46,27 @@ if(ENABLE_QT)
   )
 endif()
 
-# Dependencies shipped by obs-deps (same versions as the ones bundled with OBS itself)
-find_package(LibDataChannel REQUIRED)
-find_package(MbedTLS REQUIRED)
-find_package(qrcodegencpp REQUIRED)
+# Dependencies shipped by obs-deps on Windows and macOS (same versions as the ones bundled with OBS
+# itself). On Linux, OBS uses the distribution's libraries: see cmake/linux/camdrop-dependencies.cmake.
+if(OS_LINUX)
+  include(camdrop-dependencies)
+  find_package(Threads REQUIRED)
+  target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE Threads::Threads)
+  # Keep the statically linked mbedTLS / libdatachannel symbols private to the plugin.
+  target_link_options(${CMAKE_PROJECT_NAME} PRIVATE "LINKER:--exclude-libs,ALL")
+else()
+  find_package(LibDataChannel REQUIRED)
+  find_package(MbedTLS REQUIRED)
+  find_package(qrcodegencpp REQUIRED)
+  set(CAMDROP_DATACHANNEL_TARGET LibDataChannel::LibDataChannel)
+endif()
 find_package(FFmpeg REQUIRED COMPONENTS avcodec avutil)
 find_package(nlohmann_json QUIET)
 
 target_link_libraries(
   ${CMAKE_PROJECT_NAME}
   PRIVATE
-    LibDataChannel::LibDataChannel
+    ${CAMDROP_DATACHANNEL_TARGET}
     MbedTLS::mbedtls
     MbedTLS::mbedx509
     MbedTLS::mbedcrypto
@@ -129,9 +140,16 @@ target_sources(
     src/media/media-pipeline.hpp
     src/obs/camdrop-source.cpp
     src/obs/camdrop-source.hpp
+    src/obs/websocket-vendor.cpp
+    src/obs/websocket-vendor.hpp
+    src/third_party/obs-websocket-api.h
 )
 
-set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES CXX_STANDARD 20 CXX_STANDARD_REQUIRED ON)
+# C++20 without modules (no dependency scanning: clang-scan-deps is not always installed)
+set_target_properties(
+  ${CMAKE_PROJECT_NAME}
+  PROPERTIES CXX_STANDARD 20 CXX_STANDARD_REQUIRED ON CXX_SCAN_FOR_MODULES OFF
+)
 if(MSVC)
   target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE /Zc:char8_t-)
 endif()

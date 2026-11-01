@@ -68,17 +68,21 @@ public:
 				return;
 			}
 			const Settings s = ClientManager::get().settings();
-			ws->send_text(json{{"type", "welcome"},
-					   {"id", session_->id()},
-					   {"name", session_->name()},
-					   {"version", PLUGIN_VERSION},
-					   {"video",
-					    {{"height", s.video_height},
-					     {"fps", s.video_fps},
-					     {"maxBitrateKbps", s.max_bitrate_kbps},
-					     {"codec", s.preferred_codec}}},
-					   {"audio", {{"opus10ms", s.opus_10ms}}}}
-					      .dump());
+			ws->send_text(json{
+				{"type", "welcome"},
+				{"id", session_->id()},
+				{"name", session_->name()},
+				{"version", PLUGIN_VERSION},
+				{"video",
+				 {{"height", s.video_height},
+				  {"fps", s.video_fps},
+				  {"maxBitrateKbps", s.max_bitrate_kbps},
+				  {"codec", s.preferred_codec},
+				  {"orientation", s.orientation}}},
+				{"audio", {{"opus10ms", s.opus_10ms}}},
+				{"tally",
+				 s.tally}}.dump());
+			ClientManager::get().request_tally_update();
 			return;
 		}
 		session_->handle_message(j);
@@ -182,8 +186,20 @@ void ClientManager::disconnect_all(const std::string &reason)
 
 void ClientManager::update_settings(const Settings &settings)
 {
-	std::lock_guard<std::mutex> lock(mutex_);
-	settings_ = settings;
+	std::vector<std::shared_ptr<CameraSession>> sessions;
+	bool changed;
+	{
+		std::lock_guard<std::mutex> lock(mutex_);
+		changed = settings_.orientation != settings.orientation || settings_.tally != settings.tally;
+		settings_ = settings;
+		if (changed)
+			for (auto &[id, s] : sessions_)
+				sessions.push_back(s);
+	}
+	for (auto &s : sessions)
+		s->send({{"type", "config"}, {"orientation", settings.orientation}, {"tally", settings.tally}});
+	if (changed)
+		request_tally_update();
 }
 
 Settings ClientManager::settings() const
@@ -304,6 +320,14 @@ std::shared_ptr<CameraSession> ClientManager::join(const json &hello, const Peer
 	if (replaced)
 		replaced->close("replaced", true);
 	obs_log(LOG_INFO, "Camera \"%s\" joined from %s", name.c_str(), peer.ip.c_str());
+
+	std::function<void(const std::string &)> hook;
+	{
+		std::lock_guard<std::mutex> lock(hooks_mutex_);
+		hook = join_hook_;
+	}
+	if (hook && !replaced)
+		hook(name);
 	return session;
 }
 
@@ -313,36 +337,44 @@ void ClientManager::leave(const std::shared_ptr<CameraSession> &session, const s
 		return;
 	json last = session->status();
 	session->close(reason, false);
-	std::lock_guard<std::mutex> lock(mutex_);
-	auto it = sessions_.find(session->id());
-	if (it == sessions_.end() || it->second != session)
-		return; // replaced or already removed
-	sessions_.erase(it);
-	Departed d;
-	d.name = session->name();
-	d.reason = reason;
-	d.when_ns = now_ns();
-	d.last_status = std::move(last);
-	departed_.push_back(std::move(d));
-	if (departed_.size() > 32)
-		departed_.erase(departed_.begin());
+	{
+		std::lock_guard<std::mutex> lock(mutex_);
+		auto it = sessions_.find(session->id());
+		if (it == sessions_.end() || it->second != session)
+			return; // replaced or already removed
+		sessions_.erase(it);
+		Departed d;
+		d.name = session->name();
+		d.reason = reason;
+		d.when_ns = now_ns();
+		d.last_status = std::move(last);
+		departed_.push_back(std::move(d));
+		if (departed_.size() > 32)
+			departed_.erase(departed_.begin());
+	}
+	std::function<void(const std::string &, const std::string &)> hook;
+	{
+		std::lock_guard<std::mutex> lock(hooks_mutex_);
+		hook = leave_hook_;
+	}
+	if (hook)
+		hook(session->name(), reason);
 }
 
 std::vector<ClientManager::ClientInfo> ClientManager::clients() const
 {
 	std::vector<ClientInfo> out;
 	std::lock_guard<std::mutex> lock(mutex_);
-	for (const auto &[id, s] : sessions_) {
-		auto it =
-			std::find_if(out.begin(), out.end(), [&](const ClientInfo &c) { return c.name == s->name(); });
-		if (it == out.end())
-			out.push_back({s->name(), true});
+	auto listed = [&out](const std::string &name) {
+		return std::any_of(out.begin(), out.end(), [&name](const ClientInfo &c) { return c.name == name; });
+	};
+	for (const auto &entry : sessions_) {
+		if (!listed(entry.second->name()))
+			out.push_back({entry.second->name(), true});
 	}
-	for (const auto &[name, weak] : channels_) {
-		if (weak.expired())
-			continue;
-		if (std::none_of(out.begin(), out.end(), [&](const ClientInfo &c) { return c.name == name; }))
-			out.push_back({name, false});
+	for (const auto &entry : channels_) {
+		if (!entry.second.expired() && !listed(entry.first))
+			out.push_back({entry.first, false});
 	}
 	std::sort(out.begin(), out.end(), [](const ClientInfo &a, const ClientInfo &b) { return a.name < b.name; });
 	return out;
@@ -382,6 +414,7 @@ json ClientManager::status_json() const
 	return json{{"type", "status"},
 		    {"version", PLUGIN_VERSION},
 		    {"maxClients", s.max_clients},
+		    {"orientation", s.orientation},
 		    {"cameras", cameras},
 		    {"departed", departed}};
 }
@@ -422,25 +455,160 @@ void ClientManager::handle_dock_message(const json &message)
 				departed_.end());
 		return;
 	}
-	if (!session)
-		return;
-	if (type == "keyframe")
+	if (session)
+		run_command(session, type, message);
+}
+
+void ClientManager::run_command(const std::shared_ptr<CameraSession> &session, const std::string &type,
+				const json &payload)
+{
+	if (type == "keyframe") {
 		session->request_keyframe();
-	else if (type == "kick")
+	} else if (type == "kick") {
 		leave(session, "kicked");
-	else if (type == "identify")
+	} else if (type == "identify") {
 		session->send({{"type", "identify"}});
+	} else if (type == "control") {
+		auto it = payload.find("set");
+		if (it == payload.end() || !it->is_object())
+			return;
+		json set = validate_control(*it);
+		if (!set.empty())
+			session->send_control(set);
+	}
+}
+
+bool ClientManager::command(const std::string &camera_name, const std::string &type, const json &payload,
+			    std::string &error)
+{
+	if (type != "keyframe" && type != "kick" && type != "identify" && type != "control") {
+		error = "unknown command";
+		return false;
+	}
+	std::shared_ptr<CameraSession> session;
+	{
+		std::lock_guard<std::mutex> lock(mutex_);
+		for (auto &[id, s] : sessions_) {
+			if (s->name() == camera_name && !s->closed()) {
+				session = s;
+				break;
+			}
+		}
+	}
+	if (!session) {
+		error = "camera not connected";
+		return false;
+	}
+	if (type == "control") {
+		auto it = payload.find("set");
+		if (it == payload.end() || !it->is_object() || validate_control(*it).empty()) {
+			error = "nothing to change";
+			return false;
+		}
+	}
+	run_command(session, type, payload);
+	return true;
+}
+
+json ClientManager::validate_control(const json &set)
+{
+	json out = json::object();
+	auto str = [&](const char *key, size_t max) -> const json * {
+		auto it = set.find(key);
+		return it != set.end() && it->is_string() && it->get<std::string>().size() <= max ? &*it : nullptr;
+	};
+	if (const json *v = str("deviceId", 256))
+		out["deviceId"] = *v;
+	if (const json *v = str("facing", 16)) {
+		const std::string f = v->get<std::string>();
+		if (f == "user" || f == "environment" || f == "toggle")
+			out["facing"] = f;
+	}
+	if (const json *v = str("video", 16)) {
+		const std::string m = v->get<std::string>();
+		if (m == "camera" || m == "none")
+			out["video"] = m;
+	}
+	auto it = set.find("zoom");
+	if (it != set.end() && it->is_number())
+		out["zoom"] = std::clamp(it->get<double>(), 0.0, 100.0);
+	it = set.find("torch");
+	if (it != set.end() && it->is_boolean())
+		out["torch"] = it->get<bool>();
+	it = set.find("muted");
+	if (it != set.end() && it->is_boolean())
+		out["muted"] = it->get<bool>();
+	it = set.find("height");
+	if (it != set.end() && it->is_number_integer()) {
+		const int h = it->get<int>();
+		if (h == 360 || h == 480 || h == 720 || h == 1080 || h == 1440 || h == 2160)
+			out["height"] = h;
+	}
+	it = set.find("fps");
+	if (it != set.end() && it->is_number_integer()) {
+		const int f = it->get<int>();
+		if (f == 15 || f == 24 || f == 25 || f == 30 || f == 50 || f == 60)
+			out["fps"] = f;
+	}
+	return out;
+}
+
+void ClientManager::request_tally_update()
+{
+	{
+		std::lock_guard<std::mutex> lock(thread_mutex_);
+		tally_dirty_ = true;
+	}
+	cv_.notify_all();
+}
+
+void ClientManager::update_tallies()
+{
+	std::vector<std::shared_ptr<CameraSession>> sessions;
+	bool enabled;
+	{
+		std::lock_guard<std::mutex> lock(mutex_);
+		enabled = settings_.tally;
+		for (auto &[id, s] : sessions_)
+			sessions.push_back(s);
+	}
+	for (auto &s : sessions)
+		if (!s->closed())
+			s->set_tally(enabled ? s->channel()->tally() : Tally::Off);
+}
+
+void ClientManager::set_join_hook(std::function<void(const std::string &)> fn)
+{
+	std::lock_guard<std::mutex> lock(hooks_mutex_);
+	join_hook_ = std::move(fn);
+}
+
+void ClientManager::set_leave_hook(std::function<void(const std::string &, const std::string &)> fn)
+{
+	std::lock_guard<std::mutex> lock(hooks_mutex_);
+	leave_hook_ = std::move(fn);
 }
 
 void ClientManager::maintenance_loop()
 {
+	auto next_tick = std::chrono::steady_clock::now() + std::chrono::seconds(1);
 	for (;;) {
+		bool full_tick;
 		{
 			std::unique_lock<std::mutex> lock(thread_mutex_);
-			cv_.wait_for(lock, std::chrono::seconds(1), [this] { return !running_; });
+			cv_.wait_until(lock, next_tick, [this] { return !running_ || tally_dirty_; });
 			if (!running_)
 				break;
+			tally_dirty_ = false;
+			full_tick = std::chrono::steady_clock::now() >= next_tick;
+			if (full_tick)
+				next_tick = std::chrono::steady_clock::now() + std::chrono::seconds(1);
 		}
+
+		// Tally changes are pushed right away; the rest runs once per second.
+		update_tallies();
+		if (!full_tick)
+			continue;
 
 		const int64_t now = now_ns();
 		std::vector<std::shared_ptr<CameraSession>> sessions;

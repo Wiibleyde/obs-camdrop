@@ -52,10 +52,20 @@ public:
 	json status() const;
 	void request_keyframe();
 
+	// Tally light shown on the phone (Tally::Off / Preview / Program). Sent only when it changes.
+	void set_tally(int tally);
+	int tally() const { return tally_; }
+
+	// Remote control of the phone (camera, zoom, torch, resolution...). `set` must be validated.
+	void send_control(const json &set);
+	// What the phone reported it can do (cameras, zoom range, torch...).
+	json capabilities() const;
+
 private:
 	void handle_offer(const std::string &sdp);
 	void handle_candidate(const json &message);
 	void handle_telemetry(const json &message);
+	void handle_capabilities(const json &message);
 	void setup_track(const std::shared_ptr<rtc::Track> &track);
 	void teardown_peer();
 	void set_state(const std::string &state);
@@ -86,6 +96,8 @@ private:
 	json telemetry_ = json::object();
 	int64_t telemetry_ns_ = 0;
 	bool hidden_ = false;
+	json caps_ = json::object();
+	std::string video_mode_ = "camera"; // "camera", "screen" or "none" (audio only)
 
 	mutable std::mutex video_rx_mutex_;
 	VideoReceiver video_rx_;
@@ -95,6 +107,7 @@ private:
 
 	std::atomic<int> rtt_ms_{10};
 	std::atomic<bool> closed_{false};
+	std::atomic<int> tally_{-1}; // -1: not sent yet
 
 	// Loss over the last ticks
 	uint64_t last_packets_ = 0;

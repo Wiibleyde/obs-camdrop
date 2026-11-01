@@ -18,7 +18,17 @@ public:
 	virtual void channel_audio(const obs_source_audio *audio) = 0;
 	virtual void channel_clear() = 0;
 	virtual int sink_buffer_ms() const = 0;
+	// Tally of the OBS source: Tally::Program when shown in the program output, Tally::Preview when
+	// shown elsewhere (studio mode preview, projector, properties window).
+	virtual int sink_tally() const = 0;
 };
+
+namespace Tally {
+constexpr int Off = 0;
+constexpr int Preview = 1;
+constexpr int Program = 2;
+const char *name(int tally);
+} // namespace Tally
 
 // A named camera slot. Sources subscribe by name; whichever session currently uses that name
 // (first connection, reconnection, another device with the same name later) feeds it. This is
@@ -40,6 +50,8 @@ public:
 
 	// Jitter buffer target: the largest buffer requested by the sources showing this camera.
 	int buffer_ms() const;
+	// Highest tally among the sources showing this camera.
+	int tally() const;
 	static constexpr int kDefaultBufferMs = 60;
 
 	// Bookkeeping used to blank sources a few seconds after a disconnection.

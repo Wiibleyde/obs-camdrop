@@ -174,6 +174,86 @@ button:hover {
 	background: rgba(255, 255, 255, 0.14);
 }
 
+.cam.program {
+	box-shadow: inset 0 0 0 1px var(--bad);
+}
+
+.badge.tally.program {
+	background: var(--bad);
+	color: #fff;
+	font-weight: 600;
+}
+
+.badge.tally.preview {
+	background: var(--good);
+	color: #06210f;
+	font-weight: 600;
+}
+
+.info {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+}
+
+.controls {
+	border-top: 1px solid var(--line);
+	padding-top: 4px;
+}
+
+.controls summary {
+	cursor: pointer;
+	color: var(--muted);
+	user-select: none;
+}
+
+.controls[open] summary {
+	margin-bottom: 4px;
+}
+
+.crow {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin: 3px 0;
+	min-width: 0;
+}
+
+.clabel {
+	color: var(--muted);
+	min-width: 52px;
+}
+
+.cvalue {
+	min-width: 36px;
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+}
+
+.crow select {
+	flex: 1;
+	min-width: 0;
+	font: inherit;
+	font-size: 12px;
+	color: var(--text);
+	background: var(--bg);
+	border: 1px solid var(--line);
+	border-radius: 5px;
+	padding: 2px 4px;
+}
+
+.crow input[type="range"] {
+	flex: 1;
+	min-width: 0;
+	accent-color: var(--good);
+}
+
+button.toggle.on {
+	background: rgba(245, 165, 36, 0.3);
+	border-color: var(--warn);
+}
+
 .empty {
 	color: var(--muted);
 	padding: 16px 10px;

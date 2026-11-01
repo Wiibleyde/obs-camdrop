@@ -19,11 +19,15 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include <obs-module.h>
 
 #include "core/app.hpp"
+#include "core/client-manager.hpp"
 #include "obs/camdrop-source.hpp"
+#include "obs/websocket-vendor.hpp"
 #include "plugin-support.h"
 
 #ifdef CAMDROP_HAVE_FRONTEND
 #include <obs-frontend-api.h>
+
+#include "obs/auto-source.hpp"
 #endif
 
 #ifdef CAMDROP_HAVE_QT
@@ -45,23 +49,58 @@ MODULE_EXPORT const char *obs_module_description(void)
 }
 
 #ifdef CAMDROP_HAVE_FRONTEND
+static void frontend_ready()
+{
+	camdrop::auto_source_set_ready(true);
+	// Cameras that joined while OBS was starting.
+	for (const auto &c : camdrop::ClientManager::get().clients())
+		if (c.live)
+			camdrop::auto_source_on_join(c.name);
+}
+
 static void on_frontend_event(enum obs_frontend_event event, void *)
 {
+	switch (event) {
+	case OBS_FRONTEND_EVENT_FINISHED_LOADING:
 #ifdef CAMDROP_HAVE_QT
-	if (event == OBS_FRONTEND_EVENT_FINISHED_LOADING) {
 		camdrop::ui::create_dock();
 		camdrop::ui::maybe_snapshot();
-	} else if (event == OBS_FRONTEND_EVENT_EXIT || event == OBS_FRONTEND_EVENT_SCRIPTING_SHUTDOWN)
-		camdrop::ui::shutdown();
-#else
-	(void)event;
 #endif
+		frontend_ready();
+		break;
+	case OBS_FRONTEND_EVENT_SCENE_COLLECTION_CHANGING:
+		camdrop::auto_source_set_ready(false);
+		break;
+	case OBS_FRONTEND_EVENT_SCENE_COLLECTION_CHANGED:
+		frontend_ready();
+		break;
+	case OBS_FRONTEND_EVENT_SCRIPTING_SHUTDOWN:
+	case OBS_FRONTEND_EVENT_EXIT:
+		camdrop::auto_source_set_ready(false);
+#ifdef CAMDROP_HAVE_QT
+		camdrop::ui::shutdown();
+#endif
+		break;
+	default:
+		break;
+	}
 }
 #endif
 
 bool obs_module_load(void)
 {
 	camdrop::register_camdrop_source();
+
+	camdrop::ClientManager::get().set_join_hook([](const std::string &name) {
+#ifdef CAMDROP_HAVE_FRONTEND
+		camdrop::auto_source_on_join(name);
+#endif
+		camdrop::websocket_vendor_emit("CameraConnected", {{"name", name}});
+	});
+	camdrop::ClientManager::get().set_leave_hook([](const std::string &name, const std::string &reason) {
+		camdrop::websocket_vendor_emit("CameraDisconnected", {{"name", name}, {"reason", reason}});
+	});
+
 	camdrop::App::get().load();
 
 #ifdef CAMDROP_HAVE_QT
@@ -76,8 +115,15 @@ bool obs_module_load(void)
 	return true;
 }
 
+void obs_module_post_load(void)
+{
+	camdrop::websocket_vendor_register();
+}
+
 void obs_module_unload(void)
 {
+	camdrop::ClientManager::get().set_join_hook(nullptr);
+	camdrop::ClientManager::get().set_leave_hook(nullptr);
 #ifdef CAMDROP_HAVE_FRONTEND
 	obs_frontend_remove_event_callback(on_frontend_event, nullptr);
 #endif

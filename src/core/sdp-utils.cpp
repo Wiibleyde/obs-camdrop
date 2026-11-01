@@ -136,7 +136,7 @@ std::string filter_offer(const std::string &sdp, const std::string &preferred_co
 				if (codec[pt] == "opus")
 					keep.push_back(pt);
 		} else {
-			std::vector<int> h264_cb, h264_other, vp8;
+			std::vector<int> h264_cb, h264_other, h265_main, h265_other, vp8;
 			for (int pt : order) {
 				const std::string &c = codec[pt];
 				const std::string &p = params[pt];
@@ -149,6 +149,13 @@ std::string filter_offer(const std::string &sdp, const std::string &preferred_co
 						h264_cb.push_back(pt);
 					else
 						h264_other.push_back(pt);
+				} else if (c == "h265") {
+					// Main profile first (8 bits, decoded everywhere), Main 10 as a fallback.
+					if (p.find("profile-id=1") != std::string::npos ||
+					    p.find("profile-id") == std::string::npos)
+						h265_main.push_back(pt);
+					else if (p.find("profile-id=2") != std::string::npos)
+						h265_other.push_back(pt);
 				} else if (c == "vp8") {
 					vp8.push_back(pt);
 				}
@@ -156,12 +163,28 @@ std::string filter_offer(const std::string &sdp, const std::string &preferred_co
 			std::vector<int> h264 = h264_cb.empty() ? h264_other : h264_cb;
 			if (h264.size() > 2)
 				h264.resize(2);
+			std::vector<int> h265 = h265_main;
+			h265.insert(h265.end(), h265_other.begin(), h265_other.end());
+			if (h265.size() > 2)
+				h265.resize(2);
+
+			// Preferred codec first, then H.264, VP8 and H.265 as fallbacks. H.265 is only offered by
+			// some browsers (Safari, recent Chrome with a hardware encoder).
+			auto append = [&keep](const std::vector<int> &v) {
+				keep.insert(keep.end(), v.begin(), v.end());
+			};
 			if (preferred_codec == "vp8") {
-				keep = vp8;
-				keep.insert(keep.end(), h264.begin(), h264.end());
+				append(vp8);
+				append(h264);
+				append(h265);
+			} else if (preferred_codec == "h265") {
+				append(h265);
+				append(h264);
+				append(vp8);
 			} else {
-				keep = h264;
-				keep.insert(keep.end(), vp8.begin(), vp8.end());
+				append(h264);
+				append(vp8);
+				append(h265);
 			}
 			// Retransmission streams (RFC 4588) of the kept codecs.
 			const std::vector<int> media = keep;

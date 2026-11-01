@@ -4,6 +4,8 @@
 
 #include "platform/platform.hpp"
 
+#include <mbedtls/net_sockets.h>
+
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <iphlpapi.h>
@@ -153,6 +155,11 @@ std::string host_name()
 	if (GetComputerNameExW(ComputerNameDnsHostname, buf, &len))
 		return narrow(buf);
 	return "localhost";
+}
+
+int net_send(void *ctx, const unsigned char *buf, size_t len)
+{
+	return mbedtls_net_send(ctx, buf, len); // no SIGPIPE on Windows
 }
 
 } // namespace camdrop::platform

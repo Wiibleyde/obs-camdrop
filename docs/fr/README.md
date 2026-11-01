@@ -10,10 +10,15 @@ de latence.
 
 ## Installation
 
-1. Téléchargez `camdrop-x.y.z-windows-x64.zip` dans les [releases](https://github.com/Wiibleyde/obs-camdrop/releases).
-2. Extrayez-le dans `C:\ProgramData\obs-studio\plugins` (vous obtenez
-   `...\plugins\camdrop\bin\64bit\camdrop.dll`).
-3. Redémarrez OBS (version 32.2 ou plus récente).
+OBS 32.2 ou plus récent. Téléchargez le fichier de votre système dans les
+[releases](https://github.com/Wiibleyde/obs-camdrop/releases), puis redémarrez OBS.
+
+- **Windows** : extrayez `camdrop-x.y.z-windows-x64.zip` dans `C:\ProgramData\obs-studio\plugins`
+  (vous obtenez `...\plugins\camdrop\bin\64bit\camdrop.dll`).
+- **macOS** (12 ou plus récent) : ouvrez `camdrop-x.y.z-macos-universal.pkg`. Le paquet n'est pas
+  encore notarisé : si macOS le bloque, clic droit → *Ouvrir*.
+- **Ubuntu 24.04** (OBS du PPA officiel) : `sudo apt install ./camdrop-x.y.z-x86_64-linux-gnu.deb`.
+  Les autres distributions et la version Flatpak d'OBS demandent une compilation.
 
 ## Démarrage rapide
 
@@ -24,21 +29,43 @@ de latence.
    *Paramètres avancés → Continuer*. Pour supprimer l'avertissement : [guide HTTPS](../https.md)
    (domaine perso + Let's Encrypt).
 4. Saisissez le code d'accès et un nom (ex. `Scène`), autorisez la caméra, appuyez sur **Démarrer**.
-5. Dans OBS, ajoutez une source **Caméra distante (Camdrop)** et choisissez `Scène`. Vous pouvez
-   taper le nom avant que le téléphone se connecte.
+5. Une source **Camdrop – Scène** apparaît dans la scène actuelle. Vous pouvez aussi ajouter
+   vous-même une source **Caméra distante (Camdrop)** et choisir `Scène` (même avant que le
+   téléphone se connecte).
 6. **Docks → Camdrop** affiche toutes les caméras et leurs alertes (batterie, réseau, chauffe, page
-   en arrière-plan, déconnexion).
+   en arrière-plan, déconnexion) et, sous *Réglages de la caméra*, leurs commandes à distance.
+
+## Fonctions
+
+- **Tally** : bord rouge sur le téléphone quand sa source est à l'antenne, vert quand elle est dans
+  l'aperçu du mode studio.
+- **Télécommande depuis OBS** (dock) : changer de caméra ou d'objectif, zoom, lampe, résolution,
+  images/s, couper le micro ou la vidéo.
+- **Nouvelles caméras ajoutées toutes seules** dans la scène actuelle (ajustées au canevas, masquées
+  si vous êtes en direct).
+- **Côté téléphone** : partage d'écran depuis un navigateur d'ordinateur, audio seul, choix du micro.
+- **Rotation** par source (téléphone fixé de côté) et orientation demandée (paysage / portrait) avec
+  un rappel sur le téléphone.
+- **H.265 / HEVC** quand le navigateur le propose (Safari, Chrome avec encodeur matériel).
+- **obs-websocket** : requêtes du vendor `camdrop` (`GetCameras`, `SetCameraControl`,
+  `RequestKeyframe`, `Identify`, `Disconnect`) pour Stream Deck, Touch Portal ou des scripts ; voir
+  le [README anglais](../../README.md#automation-obs-websocket).
 
 ## Réglages
 
 **Plugin (Outils → Camdrop)** : serveur activé, port TCP (page + signalisation, 7443 par défaut),
 plage de ports UDP pour WebRTC (51000–51100), code d'accès, nombre maximum de caméras (8),
 certificat (auto-signé ou fichiers PEM importés, rechargés automatiquement au renouvellement),
-résolution, fréquence d'images (30 ou 60) et débit maximum demandés, codec préféré (H.264 ou VP8),
-décodage matériel, trames Opus de 10 ms.
+résolution, fréquence d'images (30 ou 60) et débit maximum demandés, codec préféré (H.264, H.265
+ou VP8), orientation (libre, paysage, portrait), décodage matériel, trames Opus de 10 ms. Onglet
+*Studio* : tally sur les téléphones, sources automatiques pour les nouvelles caméras.
 
-**Source** : nom de la caméra, **buffer (ms)**, audio activé ou coupé. Le buffer absorbe les
-variations du réseau : 40–60 ms sur un bon réseau, 80–150 ms sur un Wi-Fi chargé.
+**Source** : nom de la caméra, **buffer (ms)**, audio activé ou coupé, rotation (0/90/180/270°). Le
+buffer absorbe les variations du réseau : 40–60 ms sur un bon réseau, 80–150 ms sur un Wi-Fi chargé.
+
+Quand on tourne le téléphone, l'image passe de paysage à portrait. Avec la zone de délimitation
+*Mettre à l'échelle dans les limites* (celle des sources automatiques, et celle que pose *Ajuster à
+l'écran*, Ctrl+F), la mise en page de la scène ne bouge pas.
 
 ## Conseils
 
