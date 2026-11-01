@@ -519,7 +519,8 @@ async function tuneSender(maxBitrate, fps) {
 		if (!p.encodings || !p.encodings.length) p.encodings = [{}];
 		p.encodings[0].maxBitrate = maxBitrate;
 		p.encodings[0].maxFramerate = fps;
-		p.degradationPreference = 'maintain-framerate';
+		// 'balanced' starts at full resolution; 'maintain-framerate' starts low and needs ~10 s to climb.
+		p.degradationPreference = 'balanced';
 		await sender.setParameters(p);
 	} catch (err) {
 		console.warn('setParameters', err);

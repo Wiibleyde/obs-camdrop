@@ -15,6 +15,9 @@
 #include <QComboBox>
 #include <QDesktopServices>
 #include <QDialogButtonBox>
+#include <QDockWidget>
+#include <QGuiApplication>
+#include <QScreen>
 #include <QFileDialog>
 #include <QFormLayout>
 #include <QGroupBox>
@@ -91,8 +94,23 @@ void maybe_snapshot()
 		QTimer::singleShot(1500, [path] {
 			if (g_dialog)
 				g_dialog->grab().save(path + QStringLiteral("/settings.png"));
-			if (auto *main = static_cast<QWidget *>(obs_frontend_get_main_window()))
+			auto *main = static_cast<QWidget *>(obs_frontend_get_main_window());
+			if (main)
 				main->grab().save(path + QStringLiteral("/main.png"));
+			// Show the supervision dock floating, then capture the real screen (CEF draws natively).
+			if (auto *dock = main ? main->findChild<QDockWidget *>(QStringLiteral("camdrop-supervision")) : nullptr) {
+				dock->setFloating(true);
+				dock->resize(380, 520);
+				dock->move(80, 80);
+				dock->show();
+				dock->raise();
+				QTimer::singleShot(4000, [dock, path] {
+					const QRect r = dock->frameGeometry();
+					if (QScreen *screen = QGuiApplication::screenAt(r.center()))
+						screen->grabWindow(0, r.x(), r.y(), r.width(), r.height())
+							.save(path + QStringLiteral("/dock.png"));
+				});
+			}
 		});
 	});
 }

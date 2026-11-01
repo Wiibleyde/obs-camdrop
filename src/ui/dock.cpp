@@ -2,6 +2,7 @@
 
 #include "core/app.hpp"
 #include "ui/settings-dialog.hpp"
+#include "plugin-support.h"
 #include "ui/third_party/browser-panel.hpp"
 
 #include <obs-frontend-api.h>
@@ -12,6 +13,7 @@
 #include <QPointer>
 #include <QPushButton>
 #include <QStackedLayout>
+#include <QTimer>
 #include <QUrl>
 #include <QVBoxLayout>
 
@@ -73,8 +75,11 @@ SupervisionDock::SupervisionDock(QWidget *parent) : QWidget(parent)
 		[] { QDesktopServices::openUrl(QUrl(QString::fromStdString(App::get().status().dock_url))); });
 
 	cef_ = obs_browser_init_panel();
-	if (cef_ && !cef_->init_browser())
-		cef_ = nullptr;
+	if (!cef_)
+		obs_log(LOG_INFO, "Supervision dock: obs-browser panel API not available (%s)",
+			obs_get_module("obs-browser") ? "no QCef export" : "module not loaded");
+	else
+		cef_->init_browser(); // false only means "starting": refresh() waits for initialized()
 
 	QPointer<SupervisionDock> self(this);
 	listener_id_ = App::get().add_listener([self] {
@@ -120,12 +125,19 @@ void SupervisionDock::refresh()
 		return;
 	}
 
+	if (!cef_->initialized()) {
+		message_->setText(QStringLiteral("…"));
+		stack_->setCurrentWidget(placeholder_);
+		QTimer::singleShot(250, this, &SupervisionDock::refresh);
+		return;
+	}
+
 	const char *locale = obs_get_locale();
 	const std::string url = st.dock_url + "&embedded=1&lang=" + (locale ? locale : "en-US");
 	if (!browser_) {
-		cef_->wait_for_browser_init();
 		browser_ = cef_->create_widget(this, url);
 		if (!browser_) {
+			obs_log(LOG_WARNING, "Supervision dock: cannot create the browser widget");
 			message_->setText(T("Dock.NoBrowser"));
 			stack_->setCurrentWidget(placeholder_);
 			return;
