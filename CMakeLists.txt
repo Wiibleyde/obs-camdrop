@@ -39,6 +39,11 @@ if(ENABLE_QT)
     ${CMAKE_PROJECT_NAME}
     PROPERTIES AUTOMOC ON AUTOUIC ON AUTORCC ON
   )
+  if(OS_MACOS)
+    # Xcode 26 exports several *_DEPLOYMENT_TARGET variables to script phases, which makes the compiler
+    # call used by AUTOMOC for predefined macros fail ("conflicting deployment targets").
+    set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES AUTOMOC_COMPILER_PREDEFINES OFF)
+  endif()
   target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE CAMDROP_HAVE_QT)
   target_sources(
     ${CMAKE_PROJECT_NAME}
