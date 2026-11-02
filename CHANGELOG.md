@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented here. Versions follow [SemVer](https://semver.org).
 
-## [0.2.0] - unreleased
+## [0.2.0] - 2026-11-02
 
 - Tally light on the phones (red on air, green in the studio-mode preview) and in the dock.
 - Remote control from the dock: camera / lens, zoom, torch, resolution, frame rate, microphone
